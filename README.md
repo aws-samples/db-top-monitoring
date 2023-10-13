@@ -11,17 +11,19 @@ DBTop Monitoring is lightweight application to perform realtime monitoring for A
 Based on same simplicity concept of Unix top utility, provide quick and fast view of database performance, just all in one screen.
 
 
-<img width="1089" alt="image" src="./images/img01.png">
+<img width="1089" alt="image" src="./images/image01.png">
 
 
 ## How looks like DBTop Monitoring ?
 
-<img width="1089" alt="image" src="./images/img04.png">
+<img width="1089" alt="image" src="./images/image02.png">
 
+
+<img width="1089" alt="image" src="./images/image03.png">
 
 ## How it works?
 
-<img width="1089" alt="image" src="./images/img02.png">
+<img width="1089" alt="image" src="./images/image05.png">
 
 
 
@@ -60,7 +62,7 @@ Additional expanded support coming later to :
 
 ## Architecture
 
-<img width="1023" alt="image" src="./images/img03.png">
+<img width="1023" alt="image" src="./images/image06.png">
 
 
 ## Use cases
