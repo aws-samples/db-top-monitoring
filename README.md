@@ -172,7 +172,7 @@ Follow the step-by-step instructions to configure and deploy the DBTop Monitorin
 3. [**Open AWS CloudFormation Console**](https://console.aws.amazon.com/cloudformation/home#/stacks/create/template?stackName=DBTopMonitoringSolution)
 4. Create an stack using Cloudformation template (DBMonitoringSolution.template) already downloaded on step 2.
 5. Input **Stack name** parameter. 
-6. Acknowledge **Application Update - Disclaimer** parameter.
+6. Acknowledge **Application Updates - Disclaimer** parameter.
 7. Input **Username** parameter, this username will be used to access the application. An email will be sent with temporary password from AWS Cognito Service. 
 8. Input **AWS Linux AMI** parameter, this parameter specify AWS AMI to build App EC2 Server. Keep default value.
 9. Select **Instance Type** parameter, indicate what instance size is needed.

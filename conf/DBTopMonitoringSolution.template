@@ -5,7 +5,7 @@ Metadata:
     ParameterGroups: 
       - 
         Label: 
-          default: "Application Update - Disclaimer"
+          default: "Application Updates - Disclaimer"
         Parameters:
           - ApplicationUpdateEnabled
           - ApplicationUpdateUrl
