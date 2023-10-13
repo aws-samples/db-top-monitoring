@@ -18,8 +18,9 @@ Based on same simplicity concept of Unix top utility, provide quick and fast vie
 
 <img width="1089" alt="image" src="./images/image02.png">
 
-
 <img width="1089" alt="image" src="./images/image03.png">
+
+<img width="1089" alt="image" src="./images/image04.png">
 
 ## How it works?
 
