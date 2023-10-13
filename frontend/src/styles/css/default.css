@@ -1,0 +1,21 @@
+#tableflat {
+  font-family: Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+  padding: 1em
+}
+
+#tableflat td, #tableflat th {
+  border: 1px solid #eaeded;
+  padding: 8px;
+}
+
+
+
+#tableflat th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #fafafa;
+  color: black;
+}

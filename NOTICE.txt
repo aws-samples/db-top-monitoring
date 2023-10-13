@@ -1,0 +1,39 @@
+DBTop Monitoring
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+
+aws-amplify/ui-react  under the Apache License 2.0
+cloudscape-design/components  under the Apache License 2.0
+cloudscape-design/design-tokens  under the Apache License 2.0
+cloudscape-design/global-styles  under the Apache License 2.0
+awsui/components-react under the Apache License 2.0
+testing-library/jest-dom  under the Massachusetts Institute of Technology (MIT) license
+testing-library/react  under the Massachusetts Institute of Technology (MIT) license
+testing-library/user-event under the Massachusetts Institute of Technology (MIT) license
+axios  under the Massachusetts Institute of Technology (MIT) license
+crypto-js  under the Massachusetts Institute of Technology (MIT) license
+react  under the Massachusetts Institute of Technology (MIT) license
+react-apexcharts  under the Massachusetts Institute of Technology (MIT) license
+react-dom  under the Massachusetts Institute of Technology (MIT) license
+react-router-dom  under the Massachusetts Institute of Technology (MIT) license
+react-scripts  under the Massachusetts Institute of Technology (MIT) license
+web-vitals  under the Apache License 2.0
+aws-sdk under the Apache License 2.0
+request under the Apache License 2.0
+cors under the Massachusetts Institute of Technology (MIT) license
+express under the Massachusetts Institute of Technology (MIT) license
+jsonwebtoken under the Massachusetts Institute of Technology (MIT) license
+jwk-to-pem under the Apache License 2.0
+mysql2 under the Massachusetts Institute of Technology (MIT) license
+mssql under the Massachusetts Institute of Technology (MIT) license
+oracledb under the Apache License 2.0
+pg under the Massachusetts Institute of Technology (MIT) license
+redis under the Massachusetts Institute of Technology (MIT) license
+redis-info under the Massachusetts Institute of Technology (MIT) license
+uuid under the Massachusetts Institute of Technology (MIT) license
+
+

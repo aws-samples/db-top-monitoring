@@ -1,0 +1,17 @@
+#/usr/lib/systemd/system/api.core.service
+[Unit]
+Description=API Webservice - Core
+Documentation=https://apicore.aws
+After=network.target
+
+[Service]
+Environment=NODE_PORT=3002
+Type=simple
+User=ec2-user
+WorkingDirectory=/aws/apps/server/
+ExecStart=/home/ec2-user/.nvm/versions/node/v16.17.1/bin/node api.core.js
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
