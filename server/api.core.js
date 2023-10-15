@@ -217,13 +217,17 @@ class classMetric {
           getDeltaByIndex(propertyName) { 
               try
               {
-                    if ( this.totalSnaps > 2 )
-                        return ( 
-                                        (
-                                                (this.currentObject[propertyName] - this.oldObject[propertyName]) / 
-                                                (Math.abs(this.currentTime - this.oldTime) / 1000)
-                                        ) || 0
-                        ) ;
+                    if ( this.totalSnaps > 2 ) {
+                                if (  (this.currentObject[propertyName] - this.oldObject[propertyName]) > 0)
+                                    return ( 
+                                                    (
+                                                            (this.currentObject[propertyName] - this.oldObject[propertyName]) / 
+                                                            (Math.abs(this.currentTime - this.oldTime) / 1000)
+                                                    ) || 0
+                                    ) ;
+                                else 
+                                    return 0;
+                    }
                     else
                         return 0;
               } 
@@ -3327,11 +3331,29 @@ async function updateStatsDocumentDBNode(connectionId,clusterId,nodeId, resource
     {
             var timeNow = new Date();
             
+    
+    
+            // Current Instance Status
+            var parameter = {
+                DBInstanceIdentifier : nodeId.substring(1)
+            };
+
+            var instanceInfo = { status : "", size : ""};
+            var instanceData = await rds.describeDBInstances(parameter).promise();
+            
+            if (instanceData.DBInstances.length > 0) {
+                instanceInfo.status = instanceData.DBInstances[0]['DBInstanceStatus'];
+                instanceInfo.size = instanceData.DBInstances[0]['DBInstanceClass'];
+                
+            }
             
             //-- Current Operations
             const currentOperations = await documentDBCluster[connectionId][clusterId][nodeId]["connection"].db("admin").command({ serverStatus: 1 });
     
-            
+            //-- Current Operations
+            const currentStatus = await documentDBCluster[connectionId][clusterId][nodeId]["connection"].db("admin").command({ isMaster : 1 });
+    
+    
             //-- OS Metrics
             const osMetrics = await gatherDocumentDBOsMetrics({ resourceId : resourceId, instanceId : nodeId.substring(1), monitoring : monitoring });
             documentDBCluster[connectionId][clusterId][nodeId]["node"].newSnapshot({
@@ -3369,7 +3391,11 @@ async function updateStatsDocumentDBNode(connectionId,clusterId,nodeId, resource
                                                                                 timeNow.getTime());
             
             documentDBCluster[connectionId][clusterId][nodeId]["property"]["timestamp"] =  osMetrics.timestamp;
-            
+            documentDBCluster[connectionId][clusterId][nodeId]["property"] = {...documentDBCluster[connectionId][clusterId][nodeId]["property"],
+                                                                              role : (currentStatus.ismaster == true ? "P" : "R" ),
+                                                                              status : instanceInfo.status,
+                                                                              size : instanceInfo.size
+            };  
           
           
             

@@ -6,6 +6,7 @@ import ChartRadialBar01 from './ChartRadialBar01';
 import { createLabelFunction } from '../components/Functions';
 import CustomTable from "./Table01";
 
+import { StatusIndicator } from '@awsui/components-react';
 import Container from "@awsui/components-react/container";
 import CompMetric01 from './Metric01';
 import CompMetric04 from './Metric04';
@@ -107,7 +108,7 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{nodeStats.name}</Link>
                 </td>
                 <td style={{"width":"5%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
-                   {nodeStats.status}
+                   <StatusIndicator type={nodeStats.status === 'available' ? 'success' : 'pending'}> {nodeStats.status} </StatusIndicator> 
                 </td>
                 <td style={{"width":"6%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
                    {nodeStats.size}
