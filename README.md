@@ -48,7 +48,7 @@ DBTop Monitoring Solution currently supports following database engines:
 
 Additional expanded support coming later to :
 
-- Amazon OpenSearch Service
+- Amazon OpenSearch
 
 
 
