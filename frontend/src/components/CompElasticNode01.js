@@ -37,7 +37,7 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
                     <CompMetric04
                         value={node.operations || 0}
-                        precision={2}
+                        precision={0}
                         format={1}
                         height={"30px"}
                         width={"100px"}
@@ -51,7 +51,7 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
                     <CompMetric04
                         value={node.getCalls || 0}
-                        precision={2}
+                        precision={0}
                         format={1}
                         height={"30px"}
                         width={"100px"}
@@ -65,7 +65,7 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
                     <CompMetric04
                         value={node.setCalls || 0}
-                        precision={2}
+                        precision={0}
                         format={1}
                         height={"30px"}
                         width={"100px"}

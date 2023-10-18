@@ -2744,6 +2744,8 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
             
             //-- Node Command Stats
             var command = await dbRedisCluster[connectionId][clusterId][nodeId]["connection"].sendCommand(['INFO','Commandstats']);
+            
+            var totalCalls = 0;
             var iRowLine = 0;
             var dataResult = "";
             command.split(/\r?\n/).forEach((line) => {
@@ -2759,6 +2761,8 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
                                 var key = metric[0];
                                 var value = metric[1];
                                 metricList = metricList + '"' + key + '":' + value + ",";
+                                if (key == "calls")
+                                    totalCalls = totalCalls + parseFloat(value);
                                 
                           });
                           dataResult = dataResult + '"' + metricGropuName + '": { ' + metricList.slice(0, -1) + ' },';
@@ -2773,7 +2777,6 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
               });
               
             var jsonCommands = JSON.parse('{' + dataResult.slice(0, -1) + ' } ');
-        
             
             dbRedisCluster[connectionId][clusterId][nodeId]["node"].newSnapshot({
                                                                                         name : "",
@@ -2783,7 +2786,7 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
                                                                                         memory: 0,
                                                                                         memoryUsed: parseFloat(jsonInfo['used_memory']),
                                                                                         memoryTotal: parseFloat(jsonInfo['maxmemory']),
-                                                                                        operations: parseFloat(jsonInfo['instantaneous_ops_per_sec']),
+                                                                                        operations: totalCalls,
                                                                                         getCalls: (( jsonCommands.hasOwnProperty('cmdstat_get') ) ? parseFloat(jsonCommands['cmdstat_get']['calls']) : 0) ,
                                                                                         getUsec: (( jsonCommands.hasOwnProperty('cmdstat_get') ) ? parseFloat(jsonCommands['cmdstat_get']['usec']) : 0) ,
                                                                                         setCalls : (( jsonCommands.hasOwnProperty('cmdstat_set') ) ? parseFloat(jsonCommands['cmdstat_set']['calls']) : 0) ,
@@ -2867,7 +2870,7 @@ async function gatherStatsRedisCluster(req, res) {
                                                                                                     );
                             
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('connectedClients',currentNode.getValueByIndex("connectedClients"));
-                            dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('operations',currentNode.getDeltaByIndex("getCalls") + currentNode.getDeltaByIndex("setCalls"));
+                            dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('operations',currentNode.getDeltaByIndex("operations"));
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('getCalls',currentNode.getDeltaByIndex("getCalls"));
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('setCalls',currentNode.getDeltaByIndex("setCalls"));
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('getLatency',currentNode.getDeltaByIndex("getUsec") / currentNode.getDeltaByIndex("getCalls"));
@@ -2888,7 +2891,7 @@ async function gatherStatsRedisCluster(req, res) {
                                     memory: (currentNode.getValueByIndex("memoryUsed")/currentNode.getValueByIndex("memoryTotal") ) * 100,
                                     memoryUsed: currentNode.getValueByIndex("memoryUsed"),
                                     memoryTotal: currentNode.getValueByIndex("memoryTotal"),
-                                    operations: currentNode.getDeltaByIndex("getCalls") + currentNode.getDeltaByIndex("setCalls"),
+                                    operations: currentNode.getDeltaByIndex("operations"),
                                     getCalls: currentNode.getDeltaByIndex("getCalls"),
                                     setCalls: currentNode.getDeltaByIndex("setCalls"),
                                     connectedClients: currentNode.getValueByIndex("connectedClients"),

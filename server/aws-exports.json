@@ -1,9 +1,0 @@
-{
-  "aws_region": "us-east-1",
-  "aws_cognito_user_pool_id": "user_pool_id",
-  "aws_cognito_user_pool_web_client_id": "web_client_id",
-  "aws_api_port": 3000,
-  "aws_token_expiration": 24,
-  "aws_application_update_url" : "https://iwpeiaj68k.execute-api.us-east-1.amazonaws.com/",
-  "aws_application_update_enabled" : true
-}
