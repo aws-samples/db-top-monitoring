@@ -1,7 +1,6 @@
 import { useState,useEffect,useRef } from 'react';
 import Axios from 'axios';
 import { configuration } from './Configs';
-import {classMetric} from '../components/Functions';
 import { useSearchParams } from 'react-router-dom';
 import CustomHeader from "../components/Header";
 import AppLayout from "@awsui/components-react/app-layout";
@@ -10,19 +9,20 @@ import Tabs from "@awsui/components-react/tabs";
 import ColumnLayout from "@awsui/components-react/column-layout";
 import { SplitPanel } from '@awsui/components-react';
 
+import StatusIndicator from "@awsui/components-react/status-indicator";
+import Spinner from "@awsui/components-react/spinner";
+
+import SpaceBetween from "@awsui/components-react/space-between";
 import Pagination from "@awsui/components-react/pagination";
 
 import Link from "@awsui/components-react/link";
 import Header from "@awsui/components-react/header";
 import Container from "@awsui/components-react/container";
 import AuroraNode  from '../components/CompAuroraNode01';
-import CompSparkline01  from '../components/ChartSparkline01';
 import CompMetric01  from '../components/Metric01';
-import CompMetric04  from '../components/Metric04';
 import ChartLine02  from '../components/ChartLine02';
 import CLWChart  from '../components/ChartCLW03';
 import ChartRadialBar01 from '../components/ChartRadialBar01';
-import ChartBar01 from '../components/ChartBar01';
 import ChartColumn01 from '../components/ChartColumn01';
 
 export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
@@ -63,7 +63,6 @@ function App() {
     const cnf_connection_id=parameter_object_values["session_id"];  
     const cnf_identifier=parameter_object_values["rds_id"];  
     const cnf_engine=parameter_object_values["rds_engine"];
-    const cnf_engine_class=parameter_object_values["rds_class"];
     const cnf_az=parameter_object_values["rds_az"];
     const cnf_version=parameter_object_values["rds_version"];
     const cnf_resource_id=parameter_object_values["rds_resource_id"];
@@ -85,94 +84,8 @@ function App() {
     //--######## RealTime Metric Features
     
     //-- Variable for Split Panels
-    const historyChartDetails = 20;
     const [splitPanelShow,setsplitPanelShow] = useState(false);
-    
-      
-    const [selectedItems,setSelectedItems] = useState([{ identifier: "" }]);
-    
-    const metricObjectGlobal = useRef(new classMetric([
-                                                        {name : "cpu", history : historyChartDetails },
-                                                        {name : "memory", history : historyChartDetails },
-                                                        {name : "ioreads", history : historyChartDetails },
-                                                        {name : "iowrites", history : historyChartDetails },
-                                                        {name : "netin", history : historyChartDetails },
-                                                        {name : "netout", history : historyChartDetails },
-                                                        {name : "queries", history : historyChartDetails },
-                                                        {name : "questions", history : historyChartDetails },
-                                                        {name : "comSelect", history : historyChartDetails },
-                                                        {name : "comInsert", history : historyChartDetails },
-                                                        {name : "comDelete", history : historyChartDetails },
-                                                        {name : "comUpdate", history : historyChartDetails },
-                                                        {name : "comCommit", history : historyChartDetails },
-                                                        {name : "comRollback", history : historyChartDetails },
-                                                        {name : "threads", history : historyChartDetails },
-                                                        {name : "threadsRunning", history : historyChartDetails },
-                                                        
-    ]));
-    
-   
-    var nodeMetrics = useRef([]);
-    var nodeMembers = useRef([]);
     const [metricDetailsIndex,setMetricDetailsIndex] = useState({index : 'cpu', title : 'CPU Usage(%)', timestamp : 0 });
-    const [dataMetrics,setDataMetrics] = useState({ 
-                                                cpu: 0,
-                                                memory: 0,
-                                                ioreads: 0,
-                                                iowrites: 0,
-                                                iops : 0,
-                                                netin: 0,
-                                                netout: 0,
-                                                network : 0,
-                                                queries: 0,
-                                                questions: 0,
-                                                comSelect: 0,
-                                                comInsert: 0,
-                                                comDelete: 0,
-                                                comUpdate: 0,
-                                                comCommit: 0,
-                                                comRollback: 0,
-                                                threads : 0,
-                                                threadsRunning : 0,
-                                                timestamp : 0,
-                                                refObject : new classMetric([
-                                                                                {name : "cpu", history : historyChartDetails },
-                                                                                {name : "memory", history : historyChartDetails },
-                                                                                {name : "ioreads", history : historyChartDetails },
-                                                                                {name : "iowrites", history : historyChartDetails },
-                                                                                {name : "netin", history : historyChartDetails },
-                                                                                {name : "netout", history : historyChartDetails },
-                                                                                {name : "queries", history : historyChartDetails },
-                                                                                {name : "questions", history : historyChartDetails },
-                                                                                {name : "comSelect", history : historyChartDetails },
-                                                                                {name : "comInsert", history : historyChartDetails },
-                                                                                {name : "comDelete", history : historyChartDetails },
-                                                                                {name : "comUpdate", history : historyChartDetails },
-                                                                                {name : "comCommit", history : historyChartDetails },
-                                                                                {name : "comRollback", history : historyChartDetails },
-                                                                                {name : "threads", history : historyChartDetails },
-                                                                                {name : "threadsRunning", history : historyChartDetails },
-                                                                                ]),
-                                                metricDetails : []
-                                                
-    });
-    const [dataNodes,setDataNodes] = useState({ 
-                                                    MemberClusters : [],
-                                                    ConfigurationEndpoint : "",
-                                                    Port : "",
-                                                    CacheNodeType : "",
-                                                    ReplicationGroupId : "",
-                                                    Status : "",
-                                                    Version : "",
-                                                    Shards : "",
-                                                    ConfigurationUid : "",
-                                                    ClusterEnabled : "",
-                                                    MultiAZ : "",
-                                                    DataTiering : "",
-                                                    clwDimensions : "",
-                                    });
-                
-    ////-----
     
     //-- Variable for Paging
     const [currentPageIndex,setCurrentPageIndex] = useState(1);
@@ -184,6 +97,8 @@ function App() {
     const nodeList = useRef("");
     const [clusterStats,setClusterStats] = useState({ 
                                 cluster : {
+                                            status: "pending",
+                                            nodes : 0,
                                             cpu: 0,
                                             memory: 0,
                                             ioreads: 0,
@@ -497,9 +412,23 @@ function App() {
             <>
                             <table style={{"width":"100%"}}>
                                 <tr>  
-                                    <td style={{"width":"50%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
-                                        <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                                    <td style={{"width":"40%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
+                                        <SpaceBetween direction="horizontal" size="xs">
+                                            { clusterStats['cluster']['status'] != 'available' &&
+                                                <Spinner size="big" />
+                                            }
+                                            <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                                        </SpaceBetween>
                                     </td>
+                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <StatusIndicator type={clusterStats['cluster']['status'] === 'available' ? 'success' : 'pending'}> {clusterStats['cluster']['status']} </StatusIndicator>
+                                        <Box variant="awsui-key-label">Status</Box>
+                                    </td>
+                                    <td style={{"width":"45%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['nodes']}</div>
+                                        <Box variant="awsui-key-label">Nodes</Box>
+                                    </td>
+                                    
                                 </tr>
                             </table>
                             

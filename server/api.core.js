@@ -97,31 +97,6 @@ var memorydb = new AWS.MemoryDB();
 var dbRedis = {};
 var dbRedisCluster = {};
 
-var nodeType = {
-        name : "",
-        cpuUser: 0,
-        cpuSys: 0,
-        memory: 0,
-        memoryUsed: 0,
-        memoryTotal: 0,
-        operations: 0,
-        getCalls: 0,
-        getUsec: 0,
-        setCalls: 0,
-        setUsec: 0,
-        connectedClients: 0,
-        getLatency: 0,
-        setLatency: 0,
-        keyspaceHits: 0,
-        keyspaceMisses: 0,
-        netIn: 0,
-        netOut: 0,
-        connectionsTotal: 0,
-        commands: 0,
-        timestamp : 0
-    
-};
-
 
 
 // DocumentDB Variables
@@ -449,7 +424,7 @@ app.post("/api/security/rds/auth/", csrfProtection, (req,res)=>{
                                                                                                                     ]
                                                                                                     ) ;
                             auroraCluster["$" + session_id][ "$" + params.cluster]["property"]  = function(){};
-                            auroraCluster["$" + session_id][ "$" + params.cluster]["property"]  = { clusterId: params.cluster, timestamp : "" }
+                            auroraCluster["$" + session_id][ "$" + params.cluster]["property"]  = { clusterId: params.cluster, timestamp : "", status : "pending", nodes: 0, instanceRoles : [] }
                             
                             
                         }
@@ -476,6 +451,12 @@ app.post("/api/security/rds/auth/", csrfProtection, (req,res)=>{
                       port: params.port,
                       max: 1,
                     })
+                    
+                    dbconnection.on('error', (err, client) => {
+                       console.log('Unexpected error on idle PostgreSQL client initial.');
+                       console.log(err);
+                    });
+                
                     dbconnection.connect(function(err) {
                       if (err) {
                         res.status(200).send( {"result":"auth0", "session_id": 0});
@@ -512,7 +493,7 @@ app.post("/api/security/rds/auth/", csrfProtection, (req,res)=>{
                                                                                                                     ]
                                                                                                     ) ;
                             auroraCluster["$" + session_id][ "$" + params.cluster]["property"]  = function(){};
-                            auroraCluster["$" + session_id][ "$" + params.cluster]["property"]  = { clusterId: params.cluster, timestamp : "" }
+                            auroraCluster["$" + session_id][ "$" + params.cluster]["property"]  = { clusterId: params.cluster, timestamp : "",  status : "pending", nodes: 0, instanceRoles : [] }
                     
                     
                             
@@ -624,9 +605,7 @@ app.get("/api/security/rds/disconnect/", (req,res)=>{
     if (standardToken.isValid === false || cognitoToken.isValid === false)
         return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
 
-
     // API Call
-    
     try {
         
         switch(req.query.engine)
@@ -856,6 +835,7 @@ async function openAuroraPostgresqlConnectionCluster(req, res) {
                 roleType[instance['DBInstanceIdentifier']] =  ( String(instance['IsClusterWriter']) == "true" ? "P" : "R" );
             });
             
+            auroraCluster["$" + params.connectionId]["$" + params.clusterId]["property"]["instanceRoles"] = roleType;
             
             // Gather Instances
             var parameter = {
@@ -950,9 +930,14 @@ async function openAuroraPostgresqlConnectionNode(node){
                                                                                                         password: node.password,
                                                                                                         database: "postgres",
                                                                                                         port: node.port,
-                                                                                                        max: 2,
+                                                                                                        //max: 1,
                 });
                 
+                auroraCluster[connectionId][clusterId][instanceId]["connection"].on('error', (err) => {
+                   console.log('Unexpected error on idle PostgreSQL client.');
+                   console.log(err);
+                });
+  
                 auroraCluster[connectionId][clusterId][instanceId]["node"] = function(){};
                 auroraCluster[connectionId][clusterId][instanceId]["node"] = new classMetric(
                                                                                                 node.nodeUid,
@@ -1021,6 +1006,8 @@ async function updateStatsAuroraClusterPostgresql(req, res) {
         try
             {
                 var params = req.query;
+                
+                updateStatusAuoraCluster(params.connectionId, params.clusterId);
                 
                 var nodes = auroraCluster["$" + params.connectionId]["$" + params.clusterId];
                 for (let nodeId of Object.keys(nodes)) {
@@ -1352,7 +1339,7 @@ async function gatherStatsAuroraClusterPostgresql(req, res) {
                             var nodeStats = {
                                     name : auroraCluster[connectionId][clusterId][nodeId]["property"]["instanceId"],
                                     monitoring : auroraCluster[connectionId][clusterId][nodeId]["property"]["monitoring"],
-                                    role : auroraCluster[connectionId][clusterId][nodeId]["property"]["role"],
+                                    role : auroraCluster[connectionId][clusterId]["property"]["instanceRoles"][auroraCluster[connectionId][clusterId][nodeId]["property"]["instanceId"]],
                                     size : auroraCluster[connectionId][clusterId][nodeId]["property"]["size"],
                                     az : auroraCluster[connectionId][clusterId][nodeId]["property"]["az"],
                                     status : auroraCluster[connectionId][clusterId][nodeId]["property"]["status"],
@@ -1463,6 +1450,8 @@ async function gatherStatsAuroraClusterPostgresql(req, res) {
                 
                 res.status(200).send( { 
                                         cluster : {
+                                                    status : auroraCluster[connectionId][clusterId]["property"]["status"],
+                                                    nodes : auroraCluster[connectionId][clusterId]["property"]["nodes"],        
                                                     ...clusterInfo,
                                                     history : {
                                                                 cpu: auroraCluster[connectionId][clusterId]["cluster"].getPropertyValues('cpu'),
@@ -1672,6 +1661,7 @@ async function openAuroraMysqlConnectionCluster(req, res) {
                 roleType[instance['DBInstanceIdentifier']] =  ( String(instance['IsClusterWriter']) == "true" ? "P" : "R" );
             });
             
+            auroraCluster["$" + params.connectionId]["$" + params.clusterId]["property"]["instanceRoles"] = roleType;
             
             // Gather Instances
             var parameter = {
@@ -1862,6 +1852,8 @@ async function updateStatsAuroraClusterMysql(req, res) {
             {
                 var params = req.query;
                 
+                updateStatusAuoraCluster(params.connectionId, params.clusterId);
+                
                 var nodes = auroraCluster["$" + params.connectionId]["$" + params.clusterId];
                 for (let nodeId of Object.keys(nodes)) {
                         if (nodeId != "cluster"  && nodeId != "property" ){
@@ -1880,11 +1872,67 @@ async function updateStatsAuroraClusterMysql(req, res) {
 }
 
 
+async function updateStatusAuoraCluster(connectionId,clusterId) {
+
+
+    try {
+        
+        var parameterCluster = {
+                DBClusterIdentifier: clusterId,
+                MaxRecords: 100
+            };
+
+        var clusterData = await rds.describeDBClusters(parameterCluster).promise();
+        
+        auroraCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = clusterData['DBClusters'][0]['Status'];
+        auroraCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] =clusterData['DBClusters'][0]['DBClusterMembers'].length;
+        
+        
+         var roleType = [];
+            
+        clusterData['DBClusters'][0]['DBClusterMembers'].forEach(function(instance) {
+                roleType[instance['DBInstanceIdentifier']] =  ( String(instance['IsClusterWriter']) == "true" ? "P" : "R" );
+        });
+        
+        auroraCluster["$" + connectionId]["$" + clusterId]["property"]["instanceRoles"] = roleType;
+            
+        
+    }
+    catch(err){
+        try {
+            auroraCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = "pending";
+            auroraCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] = 0;
+        }
+        catch(err){
+            console.log(err);
+        }
+            
+    }
+    
+    
+            
+}
+
 async function updateStatsAuoraMysqlNode(connectionId,clusterId,nodeId, resourceId, monitoring) {
+    
+    var instanceInfo = { status : "-", size : "" };
     
     try
     {
             var timeNow = new Date();
+            
+            // Current Instance Status
+            var parameter = {
+                DBInstanceIdentifier : nodeId.substring(1)
+            };
+            
+            var instanceData = await rds.describeDBInstances(parameter).promise();
+            
+            if (instanceData.DBInstances.length > 0) {
+                instanceInfo.status = instanceData.DBInstances[0]['DBInstanceStatus'];
+                instanceInfo.size = instanceData.DBInstances[0]['DBInstanceClass'];
+            }
+            
             var sql_statement = "SHOW GLOBAL STATUS";
             
             var currentOperations = await auroraCluster[connectionId][clusterId][nodeId]["connectionPromise"].query(sql_statement);
@@ -1922,13 +1970,18 @@ async function updateStatsAuoraMysqlNode(connectionId,clusterId,nodeId, resource
                                                                                 timeNow.getTime());
             
             auroraCluster[connectionId][clusterId][nodeId]["property"]["timestamp"] =  osMetrics.timestamp;
+            auroraCluster[connectionId][clusterId][nodeId]["property"]["status"] =  instanceInfo.status;
+            auroraCluster[connectionId][clusterId][nodeId]["property"]["size"] =  instanceInfo.size;
             
           
           
             
     }
     catch(err){
-                console.log(err);
+            
+            auroraCluster[connectionId][clusterId][nodeId]["property"]["status"] =  instanceInfo.status;
+            auroraCluster[connectionId][clusterId][nodeId]["property"]["size"] =  instanceInfo.size;
+            console.log(err);
     }
                 
 }
@@ -1999,7 +2052,7 @@ async function gatherStatsAuroraClusterMysql(req, res) {
                             var nodeStats = {
                                     name : auroraCluster[connectionId][clusterId][nodeId]["property"]["instanceId"],
                                     monitoring : auroraCluster[connectionId][clusterId][nodeId]["property"]["monitoring"],
-                                    role : auroraCluster[connectionId][clusterId][nodeId]["property"]["role"],
+                                    role : auroraCluster[connectionId][clusterId]["property"]["instanceRoles"][auroraCluster[connectionId][clusterId][nodeId]["property"]["instanceId"]],
                                     size : auroraCluster[connectionId][clusterId][nodeId]["property"]["size"],
                                     az : auroraCluster[connectionId][clusterId][nodeId]["property"]["az"],
                                     status : auroraCluster[connectionId][clusterId][nodeId]["property"]["status"],
@@ -2109,6 +2162,8 @@ async function gatherStatsAuroraClusterMysql(req, res) {
                 
                 res.status(200).send( { 
                                         cluster : {
+                                                    status : auroraCluster[connectionId][clusterId]["property"]["status"],
+                                                    nodes : auroraCluster[connectionId][clusterId]["property"]["nodes"],
                                                     ...clusterInfo,
                                                     history : {
                                                                 cpu: auroraCluster[connectionId][clusterId]["cluster"].getPropertyValues('cpu'),
@@ -2368,6 +2423,10 @@ async function authRedisConnection(req, res) {
                                                                                                                 {name : "keyspaceMisses", history : 20 }
                                                                                                             ]
                                                                                             ) ;
+                                                                                            
+                    dbRedisCluster["$" + session_id][ "$" + params.cluster]["property"] = function(){};
+                    dbRedisCluster["$" + session_id][ "$" + params.cluster]["property"] = { status : "pending", size : "-", shards : 0 , nodes : 0};
+                
                     dbconnection.quit();
                     res.status(200).send( {"result":"auth1", "session_id": session_id, "session_token": token });
                    
@@ -2522,21 +2581,24 @@ async function openRedisMemoryDBConnectionCluster(req, res) {
                             rg['Shards'].forEach(function(shard) {
                                 
                                     shard['Nodes'].forEach(function(node) {
-                                        
-                                        openRedisConnectionNode({
-                                                                connectionId : params.connectionId,
-                                                                clusterId: params.clusterId,
-                                                                username: params.username,
-                                                                password: params.password,
-                                                                auth: params.auth,
-                                                                ssl : params.ssl,
-                                                                nodeId : node['Name'],
-                                                                endPoint : node['Endpoint']['Address'],
-                                                                port : nodePort,
-                                                                nodeUid : nodeUid,
-                                                                nodeType : rg['NodeType']
-                                                                });
-                                                
+                                        try {
+                                            openRedisConnectionNode({
+                                                                    connectionId : params.connectionId,
+                                                                    clusterId: params.clusterId,
+                                                                    username: params.username,
+                                                                    password: params.password,
+                                                                    auth: params.auth,
+                                                                    ssl : params.ssl,
+                                                                    nodeId : node['Name'],
+                                                                    endPoint : node['Endpoint']['Address'],
+                                                                    port : nodePort,
+                                                                    nodeUid : nodeUid,
+                                                                    nodeType : rg['NodeType']
+                                                                    });
+                                        }
+                                        catch(err){
+                                            console.log(err);
+                                        }
                                         nodeUid ++;
                                         nodeList = nodeList + ( rg['Name'] + "|" + node['Name'] ) + "," 
                                          
@@ -2655,10 +2717,40 @@ async function openRedisConnectionNode(node){
                 }
                 
                 dbRedisCluster[connectionId][clusterId][instanceId]["property"] = function(){};
-                dbRedisCluster[connectionId][clusterId][instanceId]["property"] = { nodeType : node.nodeType, nodeNetworkRate : nodeNetworkRate};
+                dbRedisCluster[connectionId][clusterId][instanceId]["property"] = { nodeType : node.nodeType, nodeNetworkRate : nodeNetworkRate, role : ""};
                 
                 
-                dbRedisCluster[connectionId][clusterId][instanceId]["node"].newSnapshot(nodeType,timeNow.getTime());
+                dbRedisCluster[connectionId][clusterId][instanceId]["node"].newSnapshot({
+                                                                                            name : "",
+                                                                                            cpuUser: 0,
+                                                                                            cpuSys: 0,
+                                                                                            memory: 0,
+                                                                                            memoryUsed: 0,
+                                                                                            memoryTotal: 0,
+                                                                                            operations: 0,
+                                                                                            getCalls: 0,
+                                                                                            getUsec: 0,
+                                                                                            setCalls: 0,
+                                                                                            setUsec: 0,
+                                                                                            connectedClients: 0,
+                                                                                            getLatency: 0,
+                                                                                            setLatency: 0,
+                                                                                            keyspaceHits: 0,
+                                                                                            keyspaceMisses: 0,
+                                                                                            netIn: 0,
+                                                                                            netOut: 0,
+                                                                                            connectionsTotal: 0,
+                                                                                            commands: 0,
+                                                                                            cmdExec: 0,
+                                                                                            cmdAuth: 0,
+                                                                                            cmdInfo: 0,
+                                                                                            cmdScan: 0,
+                                                                                            cmdXadd: 0,
+                                                                                            cmdZadd: 0,
+                                                                                            keys : 0,
+                                                                                            timestamp : 0
+                                                                                        },timeNow.getTime());
+                                                                                        
                 dbRedisCluster[connectionId][clusterId][instanceId]["connection"].on('error', err => {       
                               console.log(err.message);
                 });   
@@ -2667,16 +2759,32 @@ async function openRedisConnectionNode(node){
                     .then(()=> {
                         console.log("Redis Instance Connected : " + node.connectionId + " # " + node.clusterId + " # " + node.nodeId );
                         
-                        
                     })
-                    .catch(()=> {
+                    .catch((err)=> {
                         console.log("Redis Instance Connected with Errors : "  + node.connectionId + " # " + node.clusterId + " # " + node.nodeId );
+                        console.log(err);
                         
                     });
                     
             }
             else {
                 console.log("Re-using - Redis Instance connection : " +  node.connectionId + " # " + node.clusterId + " # " + node.nodeId );
+                
+                try {
+                    
+                        dbRedisCluster[connectionId][clusterId][instanceId]["connection"].connect()
+                            .then(()=> {
+                                console.log("Redis Instance Re-Connected after fail connection  : " + node.connectionId + " # " + node.clusterId + " # " + node.nodeId );
+                            })
+                            .catch((err)=> {
+                                console.log("Redis Instance Re-Connected after fail connection with Errors : "  + node.connectionId + " # " + node.clusterId + " # " + node.nodeId );
+                                console.log(err);
+                            });
+                        
+                }
+                catch(err){
+                    console.log(err);
+                }
                 
             }
     
@@ -2701,6 +2809,7 @@ async function updateStatsRedisCluster(req, res) {
                 var params = req.query;
                 
                 updateStatsRedisClusterCommand(params.connectionId, params.clusterId);
+                updateStatusRedisCluster(params.connectionId, params.clusterId, params.clusterType);
                 
                 res.status(200).send( {"result":"Cluster Update Stats Requested"});
                 
@@ -2711,14 +2820,14 @@ async function updateStatsRedisCluster(req, res) {
 }
 
 
-async function updateStatsRedisClusterCommand(connectionId,clusterId) {
+async function updateStatsRedisClusterCommand(connectionId,clusterId, clusterType) {
  
         try
             {
                 
                 var nodes = dbRedisCluster["$" + connectionId]["$" + clusterId];
                 for (let nodeId of Object.keys(nodes)) {
-                        if (nodeId != "cluster" )
+                        if (nodeId != "cluster" && nodeId != "property")
                             updateStatsRedisNode("$" + connectionId, "$" + clusterId, nodeId );
                        
                 }
@@ -2729,6 +2838,68 @@ async function updateStatsRedisClusterCommand(connectionId,clusterId) {
                 console.log(err);
         }
 }
+
+async function updateStatusRedisCluster(connectionId, clusterId, clusterType) {
+ 
+        try
+            {
+                if (clusterType == "elasticache") {
+                        var parameter = {
+                              MaxRecords: 100,
+                              ReplicationGroupId: clusterId
+                            };
+                            
+                        var clusterInfo = await elasticache.describeReplicationGroups(parameter).promise();
+                        if (clusterInfo.ReplicationGroups.length> 0) {
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = clusterInfo.ReplicationGroups[0]["Status"];
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["size"] = clusterInfo.ReplicationGroups[0]["CacheNodeType"];      
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["shards"] = clusterInfo.ReplicationGroups[0]["NodeGroups"].length;      
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] = clusterInfo.ReplicationGroups[0]["MemberClusters"].length;      
+                        }
+                        else {
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = "pending";      
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["size"] = "-";      
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["shards"] = 0;      
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] = 0;
+                        }
+                        
+                }
+                else {
+                        var parameter = {
+                              ClusterName: clusterId,
+                              ShowShardDetails: true
+                        };
+            
+                        var clusterInfo = await memorydb.describeClusters(parameter).promise();
+                        
+                        if (clusterInfo.Clusters.length> 0) {
+                            
+                            var iNodes = 0;
+                            clusterInfo.Clusters[0]["Shards"].forEach((shard) => {
+                                        iNodes = iNodes + shard["NumberOfNodes"];
+                            });
+                            
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = clusterInfo.Clusters[0]["Status"];
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["size"] = clusterInfo.Clusters[0]["NodeType"];     
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["shards"] = clusterInfo.Clusters[0]["NumberOfShards"];     
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] = iNodes;     
+                        }
+                        else {
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = "pending"; 
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["size"] = "-";     
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["shards"] = 0;     
+                            dbRedisCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] = 0;     
+                        }
+                            
+                }
+                
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
 
 async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
     
@@ -2775,9 +2946,9 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
                   
                   
               });
-              
+             
             var jsonCommands = JSON.parse('{' + dataResult.slice(0, -1) + ' } ');
-            
+            dbRedisCluster[connectionId][clusterId][nodeId]["property"]["role"] = jsonInfo['role'];
             dbRedisCluster[connectionId][clusterId][nodeId]["node"].newSnapshot({
                                                                                         name : "",
                                                                                         role : jsonInfo['role'],
@@ -2796,12 +2967,18 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
                                                                                         setLatency: 0,
                                                                                         keyspaceHits: parseFloat(jsonInfo['keyspace_hits']),
                                                                                         keyspaceMisses: parseFloat(jsonInfo['keyspace_misses']),
-                                                                                        netIn: parseFloat(jsonInfo['instantaneous_input_kbps']),
-                                                                                        netOut: parseFloat(jsonInfo['instantaneous_output_kbps']),
+                                                                                        netIn: parseFloat(jsonInfo['total_net_input_bytes']),
+                                                                                        netOut: parseFloat(jsonInfo['total_net_output_bytes']),
                                                                                         connectionsTotal: parseFloat(jsonInfo['total_connections_received']),
                                                                                         commands: parseFloat(jsonInfo['total_commands_processed']),
+                                                                                        cmdExec: (( jsonCommands.hasOwnProperty('cmdstat_exec') ) ? parseFloat(jsonCommands['cmdstat_exec']['calls']) : 0) ,
+                                                                                        cmdAuth: (( jsonCommands.hasOwnProperty('cmdstat_auth') ) ? parseFloat(jsonCommands['cmdstat_auth']['calls']) : 0) ,
+                                                                                        cmdInfo: (( jsonCommands.hasOwnProperty('cmdstat_info') ) ? parseFloat(jsonCommands['cmdstat_info']['calls']) : 0) ,
+                                                                                        cmdScan: (( jsonCommands.hasOwnProperty('cmdstat_scan') ) ? parseFloat(jsonCommands['cmdstat_scan']['calls']) : 0) ,
+                                                                                        cmdXadd: (( jsonCommands.hasOwnProperty('cmdstat_xadd') ) ? parseFloat(jsonCommands['cmdstat_xadd']['calls']) : 0) ,
+                                                                                        cmdZadd: (( jsonCommands.hasOwnProperty('cmdstat_zadd') ) ? parseFloat(jsonCommands['cmdstat_zadd']['calls']) : 0) ,
+                                                                                        keys : 0,
                                                                                         timestamp : 0
-                                                                                    
                                                                                 },
                                                                                 timeNow.getTime());
           
@@ -2809,7 +2986,14 @@ async function updateStatsRedisNode(connectionId,clusterId,nodeId) {
             
     }
     catch(err){
+            console.log(err);
+            try {
+            //-- Node Status
+            dbRedisCluster[connectionId][clusterId][nodeId]["property"]["role"] = "-";
+            }
+            catch(err) {
                 console.log(err);
+            }
     }
                 
 }
@@ -2846,25 +3030,35 @@ async function gatherStatsRedisCluster(req, res) {
                                 network : 0,
                                 connectionsTotal: 0,
                                 commands: 0,
+                                nodesGet : 0,
+                                nodesSet : 0,
+                                nodesHit : 0,
+                                cmdExec: 0,
+                                cmdAuth: 0,
+                                cmdInfo: 0,
+                                cmdScan: 0,
+                                cmdXadd: 0,
+                                cmdZadd: 0,
+                                keys : 0,
                 };
                 
                 var nodesInfo = [];
                 var totalNodes = 0;
                 for (let nodeId of Object.keys(nodes)) {
-                        if (nodeId != "cluster" ) {
+                        if (nodeId != "cluster" && nodeId != "property" ) {
                             
                             var currentNode = dbRedisCluster[connectionId][clusterId][nodeId]["node"];
                             var nodeNetworkRate = dbRedisCluster[connectionId][clusterId][nodeId]["property"]['nodeNetworkRate'];
                             
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('cpu',(currentNode.getDeltaByIndex("cpuUser") * 100 ) +  (currentNode.getDeltaByIndex("cpuSys") * 100 ));
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('memory',(currentNode.getValueByIndex("memoryUsed")/currentNode.getValueByIndex("memoryTotal") ) * 100);
-                            dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('netin',currentNode.getValueByIndex("netIn") * 1024);
-                            dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('netout',currentNode.getValueByIndex("netOut") * 1024);
+                            dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('netin',currentNode.getDeltaByIndex("netIn"));
+                            dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('netout',currentNode.getDeltaByIndex("netOut"));
                             
                             dbRedisCluster[connectionId][clusterId][nodeId]["node"].addPropertyValue('network',
                                                                                                          ( 
                                                                                                             ( 
-                                                                                                                (currentNode.getValueByIndex("netOut") + currentNode.getValueByIndex("netIn") ) * 1024 
+                                                                                                                (currentNode.getDeltaByIndex("netOut") + currentNode.getDeltaByIndex("netIn") ) 
                                                                                                             ) / nodeNetworkRate 
                                                                                                          ) * 100
                                                                                                     );
@@ -2886,7 +3080,7 @@ async function gatherStatsRedisCluster(req, res) {
                             var nodeStats = {
                                     name : currentNode.getObjectName(),
                                     nodeId : currentNode.getObjectId(),
-                                    role : currentNode.getValueByIndex("role"),
+                                    role : dbRedisCluster[connectionId][clusterId][nodeId]["property"]["role"],
                                     cpu: (currentNode.getDeltaByIndex("cpuUser") * 100 ) +  (currentNode.getDeltaByIndex("cpuSys") * 100 ),
                                     memory: (currentNode.getValueByIndex("memoryUsed")/currentNode.getValueByIndex("memoryTotal") ) * 100,
                                     memoryUsed: currentNode.getValueByIndex("memoryUsed"),
@@ -2902,11 +3096,18 @@ async function gatherStatsRedisCluster(req, res) {
                                     cacheHitRate: (currentNode.getDeltaByIndex("keyspaceHits") /
                                                     ( currentNode.getDeltaByIndex("keyspaceHits") + currentNode.getDeltaByIndex("keyspaceMisses"))
                                                    ) * 100,
-                                    netIn: currentNode.getValueByIndex("netIn") * 1024,
-                                    netOut: currentNode.getValueByIndex("netOut") * 1024,
-                                    network : ( ( ( currentNode.getValueByIndex("netIn") + currentNode.getValueByIndex("netOut")) * 1024 ) / nodeNetworkRate ) * 100,
+                                    netIn: currentNode.getDeltaByIndex("netIn"),
+                                    netOut: currentNode.getDeltaByIndex("netOut"),
+                                    network : ( ( ( currentNode.getDeltaByIndex("netIn") + currentNode.getDeltaByIndex("netOut")) ) / nodeNetworkRate ) * 100,
                                     connectionsTotal: currentNode.getDeltaByIndex("connectionsTotal"),
                                     commands: currentNode.getDeltaByIndex("commands"),
+                                    cmdExec: currentNode.getDeltaByIndex("cmdExec"),
+                                    cmdAuth: currentNode.getDeltaByIndex("cmdAuth"),
+                                    cmdInfo: currentNode.getDeltaByIndex("cmdInfo"),
+                                    cmdScan: currentNode.getDeltaByIndex("cmdScan"),
+                                    cmdXadd: currentNode.getDeltaByIndex("cmdXadd"),
+                                    cmdZadd: currentNode.getDeltaByIndex("cmdZadd"),
+                                    keys : 0,
                                     history : {
                                             cpu : dbRedisCluster[connectionId][clusterId][nodeId]["node"].getPropertyValues('cpu'),
                                             memory : dbRedisCluster[connectionId][clusterId][nodeId]["node"].getPropertyValues('memory'),
@@ -2948,7 +3149,17 @@ async function gatherStatsRedisCluster(req, res) {
                             clusterInfo.network = clusterInfo.network +  ( nodeStats.network || 0 );
                             clusterInfo.connectionsTotal = clusterInfo.connectionsTotal +  ( nodeStats.connectionsTotal || 0 );
                             clusterInfo.commands = clusterInfo.commands +  ( nodeStats.commands || 0 );
-                                    
+                            clusterInfo.nodesGet =  clusterInfo.nodesGet  + ( ( nodeStats.getLatency || 0 ) > 0 ? 1 : 0);
+                            clusterInfo.nodesSet =  clusterInfo.nodesSet  + ( ( nodeStats.setLatency || 0 ) > 0 ? 1 : 0);
+                            clusterInfo.nodesHit =  clusterInfo.nodesHit  + ( ( nodeStats.cacheHitRate || 0 ) > 0 ? 1 : 0);
+                            clusterInfo.cmdExec = clusterInfo.cmdExec +  ( nodeStats.cmdExec || 0 );
+                            clusterInfo.cmdAuth = clusterInfo.cmdAuth +  ( nodeStats.cmdAuth || 0 );
+                            clusterInfo.cmdInfo = clusterInfo.cmdInfo +  ( nodeStats.cmdInfo || 0 );
+                            clusterInfo.cmdScan = clusterInfo.cmdScan +  ( nodeStats.cmdScan || 0 );
+                            clusterInfo.cmdXadd = clusterInfo.cmdXadd +  ( nodeStats.cmdXadd || 0 );
+                            clusterInfo.cmdZadd = clusterInfo.cmdZadd +  ( nodeStats.cmdZadd || 0 );
+                            clusterInfo.keys = clusterInfo.keys +  ( nodeStats.keys || 0 );
+                            
                             totalNodes++;
                         
                             
@@ -2960,9 +3171,9 @@ async function gatherStatsRedisCluster(req, res) {
                 clusterInfo.cpu = clusterInfo.cpu / totalNodes;
                 clusterInfo.memory = clusterInfo.memory / totalNodes;
                 clusterInfo.network = clusterInfo.network / totalNodes;
-                clusterInfo.getLatency = clusterInfo.getLatency / totalNodes;
-                clusterInfo.setLatency = clusterInfo.setLatency / totalNodes;
-                clusterInfo.cacheHitRate = clusterInfo.cacheHitRate / totalNodes;
+                clusterInfo.getLatency = clusterInfo.getLatency / clusterInfo.nodesGet;
+                clusterInfo.setLatency = clusterInfo.setLatency / clusterInfo.nodesSet;
+                clusterInfo.cacheHitRate = clusterInfo.cacheHitRate / clusterInfo.nodesHit;
                 
                 dbRedisCluster[connectionId][clusterId]["cluster"].addPropertyValue('operations',clusterInfo.operations);
                 dbRedisCluster[connectionId][clusterId]["cluster"].addPropertyValue('getCalls',clusterInfo.getCalls);
@@ -2974,6 +3185,10 @@ async function gatherStatsRedisCluster(req, res) {
                 
                 res.status(200).send( { 
                                         cluster : {
+                                                    status : dbRedisCluster[connectionId][clusterId]["property"]["status"],
+                                                    size : dbRedisCluster[connectionId][clusterId]["property"]["size"],
+                                                    shards : dbRedisCluster[connectionId][clusterId]["property"]["shards"],
+                                                    nodes : dbRedisCluster[connectionId][clusterId]["property"]["nodes"],
                                                     ...clusterInfo,
                                                     history : {
                                                         operations : dbRedisCluster[connectionId][clusterId]["cluster"].getPropertyValues('operations'),
@@ -3010,13 +3225,15 @@ async function closeRedisConnectionAll(req, res) {
                 
                 for (let nodeId of Object.keys(nodes)) {
                         try {
-                                    if (nodeId != "cluster" ) {
+                                    if (nodeId != "cluster" && nodeId != "property" ) {
                                         console.log("Redis Disconnection  : " +  params.connectionId + " # " + params.clusterId + " # " + nodeId );
-                                        nodes[nodeId]["connection"].quit();
+                                        if (nodes[nodeId]["connection"].isReady)
+                                            nodes[nodeId]["connection"].quit();
                                     }
                             }
-                        catch{
+                        catch(err){
                               console.log("Redis Disconnection error : " +  params.connectionId + " # " + params.clusterId + " # " + nodeId );
+                              console.log(err);
                           }
                         
                 }
@@ -3084,7 +3301,7 @@ async function authDocumentDBConnection(req, res) {
                                                                                                             ]
                                                                                             ) ;
                     documentDBCluster["$" + session_id][ "$" + params.clusterId]["property"]  = function(){};
-                    documentDBCluster["$" + session_id][ "$" + params.clusterId]["property"]  = { clusterId: params.clusterId, timestamp : "" }
+                    documentDBCluster["$" + session_id][ "$" + params.clusterId]["property"]  = { clusterId: params.clusterId, timestamp : "", status : "pending", nodes : 0 }
                     
                     
                     await client.close();
@@ -3309,7 +3526,7 @@ async function updateStatsDocumentDBCluster(req, res) {
         try
             {
                 var params = req.query;
-                
+                updateStatusDocumentCluster(params.connectionId, params.clusterId);
                 var nodes = documentDBCluster["$" + params.connectionId]["$" + params.clusterId];
                 for (let nodeId of Object.keys(nodes)) {
                         if (nodeId != "cluster"  && nodeId != "property" ){
@@ -3326,6 +3543,27 @@ async function updateStatsDocumentDBCluster(req, res) {
         }
 }
 
+
+async function updateStatusDocumentCluster(connectionId,clusterId) {
+
+    try {
+            var parameterCluster = {
+                DBClusterIdentifier: clusterId,
+                MaxRecords: 100
+            };
+
+            var clusterData = await docDB.describeDBClusters(parameterCluster).promise();
+            documentDBCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = clusterData['DBClusters'][0]['Status'];
+            documentDBCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] =clusterData['DBClusters'][0]['DBClusterMembers'].length;
+    }
+    catch(err){
+        documentDBCluster["$" + connectionId]["$" + clusterId]["property"]["status"] = "pending";
+        documentDBCluster["$" + connectionId]["$" + clusterId]["property"]["nodes"] = 0;
+        console.log(err);
+    }
+            
+}         
+            
 
 async function updateStatsDocumentDBNode(connectionId,clusterId,nodeId, resourceId, monitoring) {
     
@@ -3347,7 +3585,6 @@ async function updateStatsDocumentDBNode(connectionId,clusterId,nodeId, resource
             if (instanceData.DBInstances.length > 0) {
                 instanceInfo.status = instanceData.DBInstances[0]['DBInstanceStatus'];
                 instanceInfo.size = instanceData.DBInstances[0]['DBInstanceClass'];
-                
             }
             
             //-- Current Operations
@@ -3404,6 +3641,9 @@ async function updateStatsDocumentDBNode(connectionId,clusterId,nodeId, resource
             
     }
     catch(err){
+                documentDBCluster[connectionId][clusterId][nodeId]["property"]["status"] = "pending";
+                documentDBCluster[connectionId][clusterId][nodeId]["property"]["role"] = "-";
+                documentDBCluster[connectionId][clusterId][nodeId]["property"]["size"] = "-";
                 console.log(err);
     }
                 
@@ -3803,6 +4043,8 @@ async function gatherStatsDocumentDBCluster(req, res) {
                 
                 res.status(200).send( { 
                                         cluster : {
+                                                    status : documentDBCluster[connectionId][clusterId]["property"]["status"],
+                                                    nodes :  documentDBCluster[connectionId][clusterId]["property"]["nodes"],
                                                     ...clusterInfo,
                                                     history : {
                                                                 cpu: documentDBCluster[connectionId][clusterId]["cluster"].getPropertyValues('cpu'),

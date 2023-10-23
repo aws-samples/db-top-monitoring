@@ -103,6 +103,9 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                     { nodeStats.role === "R" &&
                         <Badge color="red"> R </Badge>
                     }
+                    { nodeStats.role === "-" &&
+                        <Badge>-</Badge>
+                    }
                     &nbsp;
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{nodeStats.name}</Link>
                 </td>
