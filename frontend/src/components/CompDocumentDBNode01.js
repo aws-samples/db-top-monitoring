@@ -104,6 +104,9 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                     { nodeStats.role === "R" &&
                         <Badge color="red"> R </Badge>
                     }
+                    { nodeStats.role === "-" &&
+                        <Badge>-</Badge>
+                    }
                     &nbsp;
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{nodeStats.name}</Link>
                 </td>
@@ -117,6 +120,7 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                    {nodeStats.az}
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                      <CompMetric04
                         value={ (nodeStats.opsInsert + nodeStats.opsQuery + nodeStats.opsUpdate + nodeStats.opsDelete + nodeStats.opsCommand ) || 0}
                         precision={0}
@@ -129,8 +133,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontColorValue={configuration.colors.fonts.metric100}
                         chartColorLine={"#D69855"}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={ (nodeStats.docsDeleted + nodeStats.docsInserted + nodeStats.docsReturned + nodeStats.docsUpdated ) || 0}
                         title={""}
@@ -139,8 +145,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={nodeStats.connectionsCurrent}
                         title={""}
@@ -149,8 +157,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={nodeStats.connectionsCreated}
                         title={""}
@@ -159,8 +169,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={nodeStats.cpu}
                         title={""}
@@ -169,8 +181,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={nodeStats.memory}
                         title={""}
@@ -179,8 +193,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={nodeStats.ioreads + nodeStats.iowrites}
                         title={""}
@@ -189,8 +205,10 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { nodeStats.role !== "-" &&
                     <CompMetric01 
                         value={ (nodeStats.netin + nodeStats.netout) }
                         title={""}
@@ -199,10 +217,11 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
             </tr>
             
-            { detailsVisible === true &&
+            { (detailsVisible === true && nodeStats.role !== "-" )  &&
             <tr>
                 <td></td>
                 <td colspan="11" style={{"width":"10%", "padding-left": "1em"}}>

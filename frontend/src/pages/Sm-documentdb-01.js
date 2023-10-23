@@ -9,6 +9,10 @@ import ColumnLayout from "@awsui/components-react/column-layout";
 import { SplitPanel } from '@awsui/components-react';
 import AppLayout from "@awsui/components-react/app-layout";
 
+import Icon from "@awsui/components-react/icon";
+import StatusIndicator from "@awsui/components-react/status-indicator";
+import Spinner from "@awsui/components-react/spinner";
+
 import SpaceBetween from "@awsui/components-react/space-between";
 import Pagination from "@awsui/components-react/pagination";
 import Link from "@awsui/components-react/link";
@@ -101,6 +105,10 @@ function App() {
     const nodeList = useRef("");
     const [clusterStats,setClusterStats] = useState({ 
                                 cluster : {
+                                            status : "pending",
+                                            size : "-",
+                                            shards : 0,
+                                            nodes : 0,
                                             cpu: 0,
                                             memory: 0,
                                             ioreads: 0,
@@ -419,9 +427,23 @@ function App() {
             <>
                             <table style={{"width":"100%"}}>
                                 <tr>  
-                                    <td style={{"width":"50%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
-                                        <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                                    <td style={{"width":"40%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
+                                        <SpaceBetween direction="horizontal" size="xs">
+                                            { clusterStats['cluster']['status'] != 'available' &&
+                                                <Spinner size="big" />
+                                            }
+                                            <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                                        </SpaceBetween>
                                     </td>
+                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <StatusIndicator type={clusterStats['cluster']['status'] === 'available' ? 'success' : 'pending'}> {clusterStats['cluster']['status']} </StatusIndicator>
+                                        <Box variant="awsui-key-label">Status</Box>
+                                    </td>
+                                    <td style={{"width":"45%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['nodes']}</div>
+                                        <Box variant="awsui-key-label">Nodes</Box>
+                                    </td>
+                                    
                                 </tr>
                             </table>
                             

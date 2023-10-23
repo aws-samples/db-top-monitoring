@@ -31,10 +31,14 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                     { node.role === "slave" &&
                         <Badge color="red"> R </Badge>
                     }
+                    { node.role === "-" &&
+                        <Badge>-</Badge>
+                    }
                     &nbsp;
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{node.name}</Link>
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric04
                         value={node.operations || 0}
                         precision={0}
@@ -47,8 +51,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontColorValue={configuration.colors.fonts.metric100}
                         chartColorLine={"#D69855"}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric04
                         value={node.getCalls || 0}
                         precision={0}
@@ -61,8 +67,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontColorValue={configuration.colors.fonts.metric100}
                         chartColorLine={"#D69855"}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric04
                         value={node.setCalls || 0}
                         precision={0}
@@ -75,8 +83,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontColorValue={configuration.colors.fonts.metric100}
                         chartColorLine={"#D69855"}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric01 
                         value={node.cacheHitRate || 0}
                         title={""}
@@ -85,8 +95,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric01 
                         value={node.getLatency || 0}
                         title={""}
@@ -95,8 +107,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric01 
                        value={node.setLatency || 0}
                         title={""}
@@ -105,8 +119,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric01 
                         value={node.connectedClients || 0}
                         title={""}
@@ -115,9 +131,11 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                     
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                     { node.role !== "-" &&
                      <CompMetric01 
                         value={node.cpu || 0}
                         title={""}
@@ -126,8 +144,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                     }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric01 
                         value={node.memory || 0}
                         title={""}
@@ -136,8 +156,10 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                    { node.role !== "-" &&
                     <CompMetric01 
                         value={node.network || 0}
                         title={""}
@@ -146,10 +168,11 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
+                    }
                 </td>
             </tr>
             
-            { detailsVisible === true &&
+            { (detailsVisible === true && node.role !== "-" ) &&
             <tr>
                 <td></td>
                 <td colspan="10">
@@ -163,6 +186,16 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                         >
                         <table style={{"width":"100%"}}>
                             <tr>
+                                <td style={{"width":"12%", "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.operations || 0}
+                                            title={"Operations/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"24px"}
+                                        />
+                                </td>
                                 <td style={{"width":"13%","padding-left": "0em"}}> 
                                     <ChartRadialBar01 series={JSON.stringify([Math.round(node.cpu)])} 
                                          height="180px" 
@@ -195,6 +228,181 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                                          />
                                 </td>
                             </tr>
+                        </table>
+                        <br/>
+                        <table style={{"width":"100%"}}>
+                                <tr> 
+                                    <td style={{"width":"12.5%",  "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.getCalls || 0}
+                                            title={"getCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.setCalls || 0}
+                                            title={"setCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                            <CompMetric01 
+                                            value={node.cmdExec || 0}
+                                            title={"execCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.cmdAuth || 0}
+                                            title={"authCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.cmdInfo || 0}
+                                            title={"infoCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.cmdScan || 0}
+                                            title={"scanCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                            <CompMetric01 
+                                            value={node.cmdXadd || 0}
+                                            title={"xaddCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.cmdZadd || 0}
+                                            title={"zaddCalls/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                    </td>
+                                    
+                                </tr>
+                                
+                        </table>  
+                        <br />
+                        <br />
+                        <table style={{"width":"100%"}}>
+                            <tr> 
+                                <td style={{"width":"12.5%",  "padding-left": "1em"}}>  
+                                    <CompMetric01 
+                                        value={node.keyspaceHits || 0}
+                                        title={"Cache Hits/sec"}
+                                        precision={0}
+                                        format={1}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"18px"}
+                                    />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                    <CompMetric01 
+                                        value={node.keyspaceMisses || 0}
+                                        title={"Cache Misses/sec"}
+                                        precision={0}
+                                        format={1}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"18px"}
+                                    />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.memoryTotal || 0}
+                                            title={"MemoryTotal"}
+                                            precision={0}
+                                            format={2}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                    <CompMetric01 
+                                            value={node.memoryUsed || 0}
+                                            title={"MemoryUsed"}
+                                            precision={0}
+                                            format={2}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                    <CompMetric01 
+                                        value={node.netIn || 0}
+                                        title={"NetworkIn"}
+                                        precision={0}
+                                        format={2}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"18px"}
+                                    />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                    <CompMetric01 
+                                        value={node.netOut || 0}
+                                        title={"NetworkOut"}
+                                        precision={0}
+                                        format={2}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"18px"}
+                                    />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.connectionsTotal || 0}
+                                            title={"Connections/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                </td>
+                                <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                    <CompMetric01 
+                                        value={node.connectedClients || 0}
+                                        title={"CurConnections"}
+                                        precision={0}
+                                        format={3}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"18px"}
+                                    />
+                                </td>
+                                
+                            </tr>
+                            
                         </table>
                         <br/>
                         <br/>
