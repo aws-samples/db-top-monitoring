@@ -216,19 +216,18 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                             })
                             
                             averageGlobal = averageGlobal / data.data.MetricDataResults.length;
-                            var lastValueTotal = lastValue.reduce((a, b) => a + b, 0);
+                            var lastValueTotal = lastValue.reduce((a, b) => (a || 0) + (b || 0), 0);
                             var metricValue = 0;
                             
                             switch (current_metric_mode) {
                                     case "total":
-                                                metricValue = lastValueTotal;
+                                                metricValue = (lastValueTotal || 0 );
                                                 break;
                                     case "average":
-                                                metricValue = lastValueTotal / lastValue.length; ;
+                                                metricValue = (lastValueTotal / lastValue.length) || 0; 
                                                 break;
 
                             }
-                            
                             
                             switch (format) {
                                                   case 1:

@@ -23,11 +23,10 @@ import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 import Box from "@awsui/components-react/box";
 import ColumnLayout from "@awsui/components-react/column-layout";
-import Container from "@awsui/components-react/container";
 
 import '@aws-amplify/ui-react/styles.css';
 import { SplitPanel } from '@awsui/components-react';
-import { applyMode,  Mode } from '@cloudscape-design/global-styles';
+
 
 export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
   preferencesTitle: 'Split panel preferences',
@@ -129,16 +128,60 @@ function Login() {
             
             // Add CSRF Token
             Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
+            
+            // Select engine type
+            var pathName = "";
+            var engineType = ""
+             switch (selectedItems[0]['engine']) {
+                  case "mysql":
+                  case "mariadb":
+                  case "aurora-mysql":
+                    pathName = "/sm-mysql-01";
+                    engineType = "mysql";
+                    break;
+                    
+                  case "postgres":
+                    case "aurora-postgresql":
+                    pathName = "/sm-postgresql-01";
+                    engineType = "postgresql";
+                    break;
+                    
+                  
+                  case 'sqlserver-se':
+                  case 'sqlserver-ee':
+                  case 'sqlserver-ex':
+                  case 'sqlserver-web':
+                    pathName = "/sm-mssql-01";
+                    engineType = "sqlserver";
+                    break;
+                  
+                  case "oracle-ee":
+                  case "oracle-ee-cdb":
+                  case "oracle-se2":
+                  case "oracle-se2-cdb":
+                    pathName = "/sm-oracle-01";
+                    engineType = "oracle";
+                    break;
+                  
+                  
+                  default:
+                     break;
+                    
+                  
+            }
+                    
 
             // Get Authentication
-            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/security/rds/auth/`,{
+            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/rds/instance/${engineType}/authentication/`,{
                 params: { 
                           host: selectedItems[0]['endpoint'], 
                           port: selectedItems[0]['port'], 
                           username: txtUser, 
                           password: txtPassword, 
-                          engine: selectedItems[0]['engine'],
-                          instance : selectedItems[0]['instance']
+                          engineType: selectedItems[0]['engine'],
+                          instanceId : selectedItems[0]['identifier'],
+                          instance : selectedItems[0]['instance'],
+                          resourceId : selectedItems[0]['resourceId'],
                   
                 }
             }).then((data)=>{
@@ -156,56 +199,22 @@ function Login() {
                                                                             rds_version : selectedItems[0]['version'],
                                                                             rds_resource_id : selectedItems[0]['resourceId'],
                                                                             rds_storage : selectedItems[0]['storage'],
-                                                                            rds_storage_size : selectedItems[0]['storageSize']
+                                                                            rds_storage_size : selectedItems[0]['storageSize'],
+                                                                            newObject : data.data.newObject,
+                                                                            connectionId : data.data.connectionId,
+                                                                            creationTime : data.data.creationTime,
+                                                                            instanceId : selectedItems[0]['identifier'],
+                                                                            instance : selectedItems[0]['intance'], 
+                                                                            engineType : selectedItems[0]['engine'],
                                                                             }), 
                                                             data.data.session_id
                                                             ).toString();
-                                                            
-                                                            
-                     var path_name = "";
-                     switch (selectedItems[0]['engine']) {
-                          case "mysql":
-                            path_name = "/sm-mysql-01";
-                            break;
-                            
-                          case "mariadb":
-                            path_name = "/sm-mysql-01";
-                            break;
-                            
-                          case "aurora-mysql":
-                            path_name = "/sm-mysql-02";
-                            break;
-                            
-                          case "postgres":
-                            path_name = "/sm-postgresql-01";
-                            break;
-                            
-                          case "aurora-postgresql":
-                            path_name = "/sm-postgresql-02";
-                            break;
-                          
-                          case "sqlserver-se":
-                            path_name = "/sm-mssql-01";
-                            break;
-                          
-                          case "oracle-ee":
-                          case "oracle-ee-cdb":
-                          case "oracle-se2":
-                          case "oracle-se2-cdb":
-                            path_name = "/sm-oracle-01";
-                            break;
-                          
-                          
-                          default:
-                             break;
-                            
-                          
-                    }
-                    
+                     
+                     
                     setModalConnectVisible(false);
                     settxtUser('');
                     settxtPassword('');
-                    window.open(path_name + '?' + createSearchParams({
+                    window.open( pathName + '?' + createSearchParams({
                                 session_id: session_id,
                                 code_id: data.data.session_id
                                 }).toString() ,'_blank');
@@ -221,7 +230,7 @@ function Login() {
             })
             .catch((err) => {
                 
-                console.log('Timeout API Call : /api/security/auth/');
+                console.log('Timeout API Call : /api/rds/instance/mysql/authentication/');
                 console.log(err)
             });
             
@@ -234,8 +243,6 @@ function Login() {
 
         //-- Application Update
         var appVersionObject = await applicationVersionUpdate({ codeId : "dbtop", moduleId: "rds"} );
-        
-        
         
         
         if (appVersionObject.release > configuration["apps-settings"]["release"] && configuration["apps-settings"]["release-enforcement"] ){

@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
-import Axios from 'axios';
+import { useState, useRef, memo } from 'react'
 import ChartLine02 from './ChartLine02';
 import ChartRadialBar01 from './ChartRadialBar01';
 
@@ -13,24 +12,12 @@ import CompMetric04 from './Metric04';
 import { configuration } from './../pages/Configs';
 import Badge from "@awsui/components-react/badge";
 import Link from "@awsui/components-react/link";
-import Box from "@awsui/components-react/box";
-import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
-
-import {  getMatchesCountText, paginationLabels, pageSizePreference, EmptyState } from './Functions';
-
-import { useCollection } from '@cloudscape-design/collection-hooks';
-import {CollectionPreferences,Pagination } from '@awsui/components-react';
-import TextFilter from "@awsui/components-react/text-filter";
-
-
 
 const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
 
-    
     const [detailsVisible, setDetailsVisible] = useState(false);
     const detailsVisibleState = useRef(false);
-    const activeSessions = useRef([]);
 
     const columnsTable = [
                   {id: 'opid',header: 'PID',cell: item => item['opid'],ariaLabel: createLabelFunction('opid'),sortingField: 'opid',},
@@ -39,58 +26,19 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                   {id: 'WaitState',header: 'WaitType',cell: item => item['WaitState'] || "-",ariaLabel: createLabelFunction('WaitState'),sortingField: 'WaitState',},
                   {id: 'secs_running',header: 'ElapsedTime(sec)',cell: item => item['secs_running'],ariaLabel: createLabelFunction('secs_running'),sortingField: 'secs_running',},
                   {id: 'ns',header: 'Namespace',cell: item => item['ns'],ariaLabel: createLabelFunction('ns'),sortingField: 'ns',},
-                  {id: 'ns',header: 'Operation',cell: item => item['op'],ariaLabel: createLabelFunction('op'),sortingField: 'op',},
+                  {id: 'op',header: 'Operation',cell: item => item['op'],ariaLabel: createLabelFunction('op'),sortingField: 'op',},
                   {id: 'command',header: 'Command',cell: item =>  String(JSON.stringify(item['command'])),ariaLabel: createLabelFunction('command'),sortingField: 'command',}
                   
     ];
     
     const visibleContent = ['opid', 'db', 'client', 'WaitState', 'secs_running', 'ns', 'op', 'command'];
 
-    //-- Function Gather Active Sessions
-    async function fetchSessions() {
-        //--- API Call Gather Sessions
-        if (detailsVisibleState.current == true) {
-                var api_params = {
-                              connectionId: sessionId,
-                              clusterId : clusterId,
-                              instanceId : nodeStats.name,
-                              command : JSON.stringify({ currentOp: 1, microsecs_running : {"$gte" : 1000000}, "$sort" : { microsecs_running : 1 } })
-                              };
-                
-                Axios.get(`${configuration["apps-settings"]["api_url"]}/api/documentdb/cluster/command/`,{
-                      params: api_params
-                      }).then((data)=>{
-                           
-                          activeSessions.current = data.data.inprog;
-                          
-                      })
-                      .catch((err) => {
-                          console.log('Timeout API Call : /api/documentdb/cluster/command/' );
-                          console.log(err)
-                      });
-            
-        }
-        else {
-                activeSessions.current = [];
-        }
     
-    }
-    
-    
-
     function onClickNode() {
 
         detailsVisibleState.current = (!(detailsVisibleState.current));
         setDetailsVisible(detailsVisibleState.current);
-        fetchSessions();
     }
-
-
-    useEffect(() => {
-        const id = setInterval(fetchSessions, configuration["apps-settings"]["refresh-interval-documentdb-sessions"]);
-        return () => clearInterval(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
 
 
     return (
@@ -104,8 +52,8 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                     { nodeStats.role === "R" &&
                         <Badge color="red"> R </Badge>
                     }
-                    { nodeStats.role === "-" &&
-                        <Badge>-</Badge>
+                    { ( nodeStats.role != "P" && nodeStats.role != "R" ) &&
+                        <Badge> - </Badge>
                     }
                     &nbsp;
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{nodeStats.name}</Link>
@@ -316,7 +264,7 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                                     </td>
                                     <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
                                         <CompMetric01 
-                                            value={nodeStats.opsQuery}
+                                            value={nodeStats.opsQuery || 0}
                                             title={"opsSelect/sec"}
                                             precision={0}
                                             format={3}
@@ -561,13 +509,13 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         <table style={{"width":"100%"}}>
                             <tr>  
                                 <td style={{"padding-left": "0em"}}>  
-
                                     <div style={{"overflow-y":"scroll", "overflow-y":"auto", "height": "450px"}}>  
                                                 <CustomTable
                                                   columnsTable={columnsTable}
                                                   visibleContent={visibleContent}
-                                                  dataset={activeSessions.current}
+                                                  dataset={nodeStats['sessions']}
                                                   title={"Active Sessions"}
+                                                  description={"Top 10 database active sessions"}
                                                 />
                                      </div> 
                                 </td>  

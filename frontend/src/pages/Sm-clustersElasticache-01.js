@@ -137,7 +137,7 @@ function Login() {
             Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
 
             // Get Authentication
-            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/redis/connection/auth/`,{
+            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/elasticache/redis/cluster/authentication/`,{
                 params: { 
                           cluster : selectedItems[0]['identifier'],
                           host: selectedItems[0]['endpoint'], 
@@ -145,7 +145,7 @@ function Login() {
                           username: txtUser, 
                           password: txtPassword, 
                           engine: selectedItems[0]['engine'],
-                          auth : currentTabId.current,
+                          auth : currentTabId.current ,
                           ssl : selectedItems[0]['ssl']
                   
                 }
@@ -221,7 +221,7 @@ function Login() {
             })
             .catch((err) => {
                 
-                console.log('Timeout API Call : /api/redis/connection/auth/');
+                console.log('Timeout API Call : /api/elasticache/redis/cluster/authentication/');
                 console.log(err)
             });
             

@@ -9,6 +9,7 @@ import ColumnLayout from "@awsui/components-react/column-layout";
 import { SplitPanel } from '@awsui/components-react';
 import AppLayout from "@awsui/components-react/app-layout";
 
+import Flashbar from "@awsui/components-react/flashbar";
 import Icon from "@awsui/components-react/icon";
 import StatusIndicator from "@awsui/components-react/status-indicator";
 import Spinner from "@awsui/components-react/spinner";
@@ -42,6 +43,9 @@ var CryptoJS = require("crypto-js");
 
 
 function App() {
+    
+    //-- Connection Usage
+    const [connectionMessage, setConnectionMessage] = useState([]);
     
     //-- Gather Parameters
     const [params]=useSearchParams();
@@ -94,8 +98,8 @@ function App() {
                                 cluster : {
                                             status : "pending",
                                             size : "-",
-                                            shards : 0,
-                                            nodes : 0,
+                                            totalShards : 0,
+                                            totalNodes : 0,
                                             cpu: 0,
                                             memory: 0,
                                             memoryUsed: 0,
@@ -113,6 +117,8 @@ function App() {
                                             netOut: 0,
                                             connectionsTotal: 0,
                                             commands: 0,
+                                            lastUpdate : "-",
+                                            connectionId : "-",
                                             history : {
                                                 operations : [],
                                                 getCalls : [],
@@ -121,9 +127,9 @@ function App() {
                                                 setLatency : [],
                                                 keyspaceHits : [],
                                                 keyspaceMisses : [],
-                                            }
+                                            },
+                                            nodes : [],
                                 },
-                                nodes : [],
                 });
     
     
@@ -135,7 +141,7 @@ function App() {
         
         var api_url = configuration["apps-settings"]["api_url"];
         Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
-        await Axios.post(`${api_url}/api/redis/memorydb/cluster/connection/open/`,{
+        await Axios.post(`${api_url}/api/memorydb/redis/cluster/open/connection/`,{
                       params: { 
                                 connectionId : cnf_connection_id,
                                 clusterId : cnf_identifier,
@@ -143,40 +149,34 @@ function App() {
                                 password : cnf_password,
                                 auth : cnf_auth,
                                 ssl : cnf_ssl,
+                                engineType : "memorydb"
                              }
               }).then((data)=>{
                 
                 nodeList.current = data.data.nodes;
+                if (data.data.newObject==false) {
+                    setConnectionMessage([
+                                  {
+                                    type: "info",
+                                    content: "Cluster connection already created at [" + data.data.creationTime + "] with identifier [" +  data.data.connectionId  + "], this connection will be re-used to gather metrics.",
+                                    dismissible: true,
+                                    dismissLabel: "Dismiss message",
+                                    onDismiss: () => setConnectionMessage([]),
+                                    id: "message_1"
+                                  }
+                    ]);
+                }
                   
               })
               .catch((err) => {
-                  console.log('Timeout API Call : /api/redis/memorydb/cluster/connection/open/' );
+                  console.log('Timeout API Call : /api/memorydb/redis/cluster/open/connection/' );
                   console.log(err);
                   
               });
               
     }
     
-    //-- Function Cluster Update Stats
-    async function updateClusterStats() {
-        
-        var api_url = configuration["apps-settings"]["api_url"];
-        
-        Axios.get(`${api_url}/api/redis/cluster/stats/update`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier, clusterType : "memorydb" }
-                  }).then((data)=>{
-                   
-                   
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/redis/cluster/stats/update' );
-                  console.log(err);
-                  
-              });
-              
-    }
-    
-
+   
 
     //-- Function Cluster Gather Stats
     async function gatherClusterStats() {
@@ -187,18 +187,23 @@ function App() {
         
         var api_url = configuration["apps-settings"]["api_url"];
         
-        Axios.get(`${api_url}/api/redis/cluster/stats/gather`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier, beginItem : ( (pageId.current-1) * itemsPerPage), endItem : (( (pageId.current-1) * itemsPerPage) + itemsPerPage) }
+        Axios.get(`${api_url}/api/memorydb/redis/cluster/gather/stats/`,{
+                      params: { 
+                                connectionId : cnf_connection_id, 
+                                clusterId : cnf_identifier, 
+                                beginItem : ( (pageId.current-1) * itemsPerPage), 
+                                endItem : (( (pageId.current-1) * itemsPerPage) + itemsPerPage) ,
+                                engineType : "memorydb"
+                      }
                   }).then((data)=>{
-                   console.log(data.data);
-                   setClusterStats({
-                         cluster : data.data.cluster,
-                         nodes : data.data.nodes,
-                    });
+                   var info = data.data.cluster;
+                   console.log(info);
+                   setClusterStats({ cluster : {...info} });
+                   
                      
               })
               .catch((err) => {
-                  console.log('Timeout API Call : /api/redis/cluster/stats/gather' );
+                  console.log('Timeout API Call : /api/memorydb/redis/cluster/gather/stats/' );
                   console.log(err);
                   
               });
@@ -213,13 +218,7 @@ function App() {
         openClusterConnection();
     }, []);
     
-    useEffect(() => {
-        const id = setInterval(updateClusterStats, configuration["apps-settings"]["refresh-interval-elastic"]);
-        return () => clearInterval(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-    
-    
+   
     useEffect(() => {
         const id = setInterval(gatherClusterStats, configuration["apps-settings"]["refresh-interval-elastic"]);
         return () => clearInterval(id);
@@ -254,14 +253,18 @@ function App() {
     
     const closeDatabaseConnection = () => {
         
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/redis/connection/close/`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier }
+        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/memorydb/redis/cluster/close/connection/`,{
+                      params: { 
+                                connectionId : cnf_connection_id, 
+                                clusterId : cnf_identifier,
+                                engineType : "memorydb"
+                      }
                   }).then((data)=>{
                       closeTabWindow();
                       sessionStorage.removeItem(parameter_code_id);
                   })
                   .catch((err) => {
-                      console.log('Timeout API Call : /api/redis/connection/close/');
+                      console.log('Timeout API Call : /api/memorydb/redis/cluster/close/connection/');
                       console.log(err)
                   });
                   
@@ -369,14 +372,14 @@ function App() {
                             <td style={{"width":"30%", "padding-left": "1em"}}>  
                                 
                                 <ChartColumn01 
-                                    series={metricDetailsToColumnsBar(clusterStats['nodes'],metricDetailsIndex.index)} 
+                                    series={metricDetailsToColumnsBar(clusterStats['cluster']['nodes'],metricDetailsIndex.index)} 
                                     height="200px" 
                                 />
                                 
                             </td>
                             <td style={{"width":"70%", "padding-left": "1em"}}>  
                                  <ChartLine02 
-                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['nodes'],metricDetailsIndex.index))} 
+                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['cluster']['nodes'],metricDetailsIndex.index))} 
                                     timestamp={metricDetailsIndex.timestamp} 
                                     height="200px" 
                                   />
@@ -391,9 +394,10 @@ function App() {
         }
         content={
             <>
+                            <Flashbar items={connectionMessage} />
                             <table style={{"width":"100%"}}>
                                 <tr>  
-                                    <td style={{"width":"40%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
+                                    <td style={{"width":"50%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
                                         <SpaceBetween direction="horizontal" size="xs">
                                             { clusterStats['cluster']['status'] != 'available' &&
                                                 <Spinner size="big" />
@@ -401,21 +405,25 @@ function App() {
                                             <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
                                         </SpaceBetween>
                                     </td>
-                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                    <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
                                         <StatusIndicator type={clusterStats['cluster']['status'] === 'available' ? 'success' : 'pending'}> {clusterStats['cluster']['status']} </StatusIndicator>
                                         <Box variant="awsui-key-label">Status</Box>
                                     </td>
-                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
-                                        <div>{clusterStats['cluster']['shards']}</div>
+                                    <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['totalShards']}</div>
                                         <Box variant="awsui-key-label">Shards</Box>
                                     </td>
-                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
-                                        <div>{clusterStats['cluster']['nodes']}</div>
+                                    <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['totalNodes']}</div>
                                         <Box variant="awsui-key-label">Nodes</Box>
                                     </td>
-                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                    <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
                                         <div>{clusterStats['cluster']['size']}</div>
                                         <Box variant="awsui-key-label">NodeType</Box>
+                                    </td>
+                                    <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['lastUpdate']}</div>
+                                        <Box variant="awsui-key-label">LastUpdate</Box>
                                     </td>
                                     
                                 </tr>
@@ -448,7 +456,7 @@ function App() {
                                                                                 </Header>
                                                                             }
                                                         >
-                                
+                                                                
                                                                 <table style={{"width":"100%"}}>
                                                                     <tr>  
                                                                         <td style={{"width":"12%", "padding-left": "1em"}}>  
@@ -514,9 +522,9 @@ function App() {
                                                                     </tr>
                                                                     
                                                                 </table>  
+                                                                <br />
+                                                                <br />
                                                                 
-                                                                <br />
-                                                                <br />
                                                                 <table style={{"width":"100%"}}>
                                                                     <tr> 
                                                                         <td style={{"width":"12.5%",  "padding-left": "1em"}}>  
@@ -721,8 +729,8 @@ function App() {
                                                                     
                                                                   </tr>
                                                               </table>
-                                                                
-                                                            
+                                                              
+                                                             
                                                         </Container>
                                                         <br/>
                                                         <Container
@@ -785,23 +793,15 @@ function App() {
                                                                                 <Link fontSize="body-s" onFollow={() => onClickMetric('network','Network Usage(%)')}>Network Usage(%)</Link>
                                                                             </td>
                                                                         </tr>
-                                                                                
-                                                                        {clusterStats['nodes'].map((item,key) => (
+                                                                        
+                                                                        {clusterStats['cluster']['nodes'].map((item,key) => (
                                                                                                  <ElasticNode
-                                                                                                    connectionId = {cnf_connection_id}
-                                                                                                    clusterId = {cnf_identifier}
-                                                                                                    nodeId = {item.nodeId}
-                                                                                                    instance = {item.endPoint}
-                                                                                                    port={item.port}
-                                                                                                    username = {cnf_username}
-                                                                                                    password = {cnf_password}
-                                                                                                    auth = {cnf_auth}
-                                                                                                    ssl = {cnf_ssl}
                                                                                                     node = {item}
                                                                                                 />
                                                                            
                                                                            
-                                                                            ))}
+                                                                        ))}
+                                                                        
                                                                         
                                                             </table>
                                                 
@@ -1278,11 +1278,11 @@ function App() {
                                                                         </div>
                                                                         <div>
                                                                             <Box variant="awsui-key-label">Shards</Box>
-                                                                            <div>{clusterStats['cluster']['shards']}</div>
+                                                                            <div>{clusterStats['cluster']['totalShards']}</div>
                                                                         </div>
                                                                         <div>
                                                                             <Box variant="awsui-key-label">Nodes</Box>
-                                                                            <div>{clusterStats['cluster']['nodes']}</div>
+                                                                            <div>{clusterStats['cluster']['totalNodes']}</div>
                                                                         </div>
                                                                     </ColumnLayout>
                                                                     <br/>
@@ -1299,6 +1299,10 @@ function App() {
                                                                         <div>
                                                                             <Box variant="awsui-key-label">Version</Box>
                                                                             <div>{parameter_object_values['rds_version']}</div>
+                                                                        </div>
+                                                                        <div>
+                                                                            <Box variant="awsui-key-label">ConnectionId</Box>
+                                                                            <div>{clusterStats['cluster']['connectionId']}</div>
                                                                         </div>
                                                                     </ColumnLayout>
                                                                     <br/>

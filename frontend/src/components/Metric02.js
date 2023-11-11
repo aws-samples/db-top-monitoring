@@ -1,4 +1,4 @@
-import {useState,useEffect,memo} from 'react';
+import {memo} from 'react';
 
 const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#C6C2C1", fontColorValue = "orange"}) => {
 

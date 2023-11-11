@@ -9,8 +9,12 @@ import Tabs from "@awsui/components-react/tabs";
 import ColumnLayout from "@awsui/components-react/column-layout";
 import { SplitPanel } from '@awsui/components-react';
 
+import Flashbar from "@awsui/components-react/flashbar";
 import StatusIndicator from "@awsui/components-react/status-indicator";
 import Spinner from "@awsui/components-react/spinner";
+
+import { createLabelFunction } from '../components/Functions';
+import CustomTable from "../components/Table01";
 
 import SpaceBetween from "@awsui/components-react/space-between";
 import Pagination from "@awsui/components-react/pagination";
@@ -43,7 +47,9 @@ var CryptoJS = require("crypto-js");
 
 function App() {
     
-
+    //-- Connection Usage
+    const [connectionMessage, setConnectionMessage] = useState([]);
+    
     //-- Gather Parameters
     const [params]=useSearchParams();
     
@@ -116,6 +122,9 @@ function App() {
                                             tupUpdated: 0,
                                             numbackends : 0,
                                             numbackendsActive : 0,
+                                            lastUpdate : "-",
+                                            connectionId : "-",
+                                            totalNodes : 0,
                                             history : {
                                                         cpu: [],
                                                         memory: [],
@@ -135,12 +144,28 @@ function App() {
                                                         tupUpdated: [],
                                                         numbackends: [],
                                                         numbackendsActive: [],
-                                            }
+                                            },
+                                            nodes : [],
                                 },
-                                nodes : [],
                 });
                 
 
+    //-- Active Sessions
+    
+    const columnsTable =  [
+                  {id: 'instanceId',header: 'InstanceId',cell: item => item['instanceId'],ariaLabel: createLabelFunction('instanceId'),sortingField: 'instanceId',},
+                  {id: 'PID',header: 'PID',cell: item => item['PID'],ariaLabel: createLabelFunction('PID'),sortingField: 'ThreadID',},
+                  {id: 'Username',header: 'Username',cell: item => item['Username'],ariaLabel: createLabelFunction('Username'),sortingField: 'Username',},
+                  {id: 'State',header: 'State',cell: item => item['State'] ,ariaLabel: createLabelFunction('State'),sortingField: 'State',},
+                  {id: 'Host',header: 'Host',cell: item => item['Host'],ariaLabel: createLabelFunction('Host'),sortingField: 'Host',},
+                  {id: 'WaitEvent',header: 'WaitEvent',cell: item => item['WaitEvent'] ,ariaLabel: createLabelFunction('WaitEvent'),sortingField: 'WaitEvent',},
+                  {id: 'Database',header: 'Database',cell: item => item['Database'],ariaLabel: createLabelFunction('Database'),sortingField: 'Database',},
+                  {id: 'ElapsedTime',header: 'ElapsedTime',cell: item => item['ElapsedTime'],ariaLabel: createLabelFunction('ElapsedTime'),sortingField: 'ElapsedTime',},
+                  {id: 'AppName',header: 'AppName',cell: item => item['AppName'],ariaLabel: createLabelFunction('AppName'),sortingField: 'AppName',},
+                  {id: 'SQLText',header: 'SQLText',cell: item => item['SQLText'],ariaLabel: createLabelFunction('SQLText'),sortingField: 'SQLText',}
+    ];
+    
+    const visibleContent = ['instanceId', 'PID', 'Username', 'State', 'Host', 'WaitEvent', 'Database', 'ElapsedTime', 'AppName', 'SQLText' ];
     
     
     //-- Function Gather Metrics
@@ -148,77 +173,69 @@ function App() {
         
         var api_url = configuration["apps-settings"]["api_url"];
         Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
-        await Axios.post(`${api_url}/api/aurora/postgresql/cluster/connection/open/`,{
+        await Axios.post(`${api_url}/api/aurora/cluster/postgresql/open/connection/`,{
                       params: { 
                                 connectionId : cnf_connection_id,
                                 clusterId : cnf_identifier,
                                 username : cnf_username,
-                                password : cnf_password
+                                password : cnf_password,
+                                engineType : "aurora-postgresql"
                              }
               }).then((data)=>{
                 
                 nodeList.current = data.data.nodes;
+                if (data.data.newObject==false) {
+                    setConnectionMessage([
+                                  {
+                                    type: "info",
+                                    content: "Cluster connection already created at [" + data.data.creationTime + "] with identifier [" +  data.data.connectionId  + "], this connection will be re-used to gather metrics.",
+                                    dismissible: true,
+                                    dismissLabel: "Dismiss message",
+                                    onDismiss: () => setConnectionMessage([]),
+                                    id: "message_1"
+                                  }
+                    ]);
+                }
                   
               })
               .catch((err) => {
-                  console.log('Timeout API Call : /api/aurora/postgresql/cluster/connection/open/' );
+                  console.log('Timeout API Call : /api/aurora/cluster/postgresql/open/connection/' );
                   console.log(err);
                   
               });
               
     }
     
-    //-- Function Cluster Update Stats
-    async function updateClusterStats() {
-        
-        var api_url = configuration["apps-settings"]["api_url"];
-        
-        Axios.get(`${api_url}/api/aurora/postgresql/cluster/stats/update`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier }
-                  }).then((data)=>{
-                   
-                   //console.log(data);         
-                     
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/aurora/postgresql/cluster/stats/update');
-                  console.log(err);
-                  
-              });
-              
-    }
-    
-
-
+   
     //-- Function Cluster Gather Stats
     async function gatherClusterStats() {
         
-        if (currentTabId.current != "tab01") {
-            return;
-        }
+        if (currentTabId.current == "tab01" || currentTabId.current == "tab02") {
         
-        var api_url = configuration["apps-settings"]["api_url"];
         
-        Axios.get(`${api_url}/api/aurora/postgresql/cluster/stats/gather`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier, beginItem : ( (pageId.current-1) * itemsPerPage), endItem : (( (pageId.current-1) * itemsPerPage) + itemsPerPage) }
-                  }).then((data)=>{
-                   
-                   
-                   
-                   setClusterStats({
-                         cluster : data.data.cluster,
-                         nodes : data.data.nodes,
-                    });
-                    
-                     
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/aurora/postgresql/cluster/stats/gather' );
-                  console.log(err);
-                  
-              });
+                var api_url = configuration["apps-settings"]["api_url"];
+                
+                Axios.get(`${api_url}/api/aurora/cluster/postgresql/gather/stats/`,{
+                              params: { connectionId : cnf_connection_id, 
+                                        clusterId : cnf_identifier, 
+                                        beginItem : ( (pageId.current-1) * itemsPerPage), 
+                                        endItem : (( (pageId.current-1) * itemsPerPage) + itemsPerPage),
+                                        engineType : "aurora-postgresql",
+                                        includeSessions : ( currentTabId.current == "tab02" ? 1 : 0)
+                              }
+                          }).then((data)=>{
+                           
+                           var info = data.data.cluster;
+                           setClusterStats({ cluster : {...info} });
+                             
+                      })
+                      .catch((err) => {
+                          console.log('Timeout API Call : /api/aurora/postgresql/cluster/stats/gather' );
+                          console.log(err);
+                          
+                      });
               
-        
+        }
         
     }
 
@@ -250,14 +267,14 @@ function App() {
     
     const closeDatabaseConnection = () => {
         
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aurora/postgresql/cluster/connection/close/`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier }
+        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aurora/cluster/postgresql/close/connection/`,{
+                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier, engineType : "aurora-postgresql" }
                   }).then((data)=>{
                       closeTabWindow();
                       sessionStorage.removeItem(parameter_code_id);
                   })
                   .catch((err) => {
-                      console.log('Timeout API Call : /api/aurora/postgresql/cluster/connection/close/');
+                      console.log('Timeout API Call : /api/aurora/cluster/postgresql/close/connection/');
                       console.log(err)
                   });
                   
@@ -336,12 +353,7 @@ function App() {
         openClusterConnection();
     }, []);
     
-    useEffect(() => {
-        const id = setInterval(updateClusterStats, configuration["apps-settings"]["refresh-interval-documentdb-metrics"]);
-        return () => clearInterval(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-    
+   
     
     useEffect(() => {
         const id = setInterval(gatherClusterStats, configuration["apps-settings"]["refresh-interval-documentdb-metrics"]);
@@ -383,14 +395,14 @@ function App() {
                             <td style={{"width":"30%", "padding-left": "1em"}}>  
                                 
                                 <ChartColumn01 
-                                    series={metricDetailsToColumnsBar(clusterStats['nodes'],metricDetailsIndex.index)} 
+                                    series={metricDetailsToColumnsBar(clusterStats['cluster']['nodes'],metricDetailsIndex.index)} 
                                     height="200px" 
                                 />
                                 
                             </td>
                             <td style={{"width":"70%", "padding-left": "1em"}}>  
                                  <ChartLine02 
-                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['nodes'],metricDetailsIndex.index))} 
+                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['cluster']['nodes'],metricDetailsIndex.index))} 
                                     height="200px" 
                                   />
                             </td>
@@ -404,9 +416,10 @@ function App() {
         }
         content={
             <>              
+                            <Flashbar items={connectionMessage} />
                             <table style={{"width":"100%"}}>
                                 <tr>  
-                                    <td style={{"width":"40%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
+                                    <td style={{"width":"55%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
                                         <SpaceBetween direction="horizontal" size="xs">
                                             { clusterStats['cluster']['status'] != 'available' &&
                                                 <Spinner size="big" />
@@ -418,9 +431,13 @@ function App() {
                                         <StatusIndicator type={clusterStats['cluster']['status'] === 'available' ? 'success' : 'pending'}> {clusterStats['cluster']['status']} </StatusIndicator>
                                         <Box variant="awsui-key-label">Status</Box>
                                     </td>
-                                    <td style={{"width":"45%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
-                                        <div>{clusterStats['cluster']['nodes']}</div>
+                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['totalNodes']}</div>
                                         <Box variant="awsui-key-label">Nodes</Box>
+                                    </td>
+                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['lastUpdate']}</div>
+                                        <Box variant="awsui-key-label">LastUpdate</Box>
                                     </td>
                                     
                                 </tr>
@@ -474,6 +491,7 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"18px"}
                                                                                 />
                                                                                 <br/>        
                                                                                 <br/> 
@@ -483,6 +501,7 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"18px"}
                                                                                 />
                                                                         </td>
                                                                         <td style={{"width":"10%", "padding-left": "1em"}}>  
@@ -522,8 +541,6 @@ function App() {
                                                                 </table>  
                                                                 <br />
                                                                 <br />
-                                                                <br />
-            
                                                                 <table style={{"width":"100%"}}>
                                                                     <tr> 
                                                                         <td style={{"width":"10%", "padding-left": "1em"}}>  
@@ -533,15 +550,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={3}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                            />
-                                                                        </td>
-                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
-                                                                            <CompMetric01 
-                                                                                value={clusterStats.cluster.tupReturned  || 0}
-                                                                                title={"tupReturned/sec"}
-                                                                                precision={0}
-                                                                                format={1}
-                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"18px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -551,6 +560,7 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"18px"}
                                                                                 />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -560,6 +570,7 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"18px"}
                                                                                 />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -569,6 +580,7 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"18px"}
                                                                                 />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -578,7 +590,18 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"18px"}
                                                                                 />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.tupReturned  || 0}
+                                                                                title={"tupReturned/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"18px"}
+                                                                            />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
                                                                             <CompMetric01 
@@ -587,6 +610,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"18px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -596,6 +620,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"18px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -605,6 +630,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={2}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"18px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -614,6 +640,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={2}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"18px"}
                                                                             />
                                                                         </td>
                                                                         
@@ -644,12 +671,10 @@ function App() {
                                                                     </td>
                                                                     <td style={{"width":"33%", "padding-left": "1em"}}>  
                                                                          <ChartLine02 series={JSON.stringify([
-                                                                                                clusterStats.cluster.history.tupReturned,
                                                                                                 clusterStats.cluster.history.tupFetched,
                                                                                                 clusterStats.cluster.history.tupInserted,
                                                                                                 clusterStats.cluster.history.tupDeleted,
                                                                                                 clusterStats.cluster.history.tupUpdated,
-                                                                                                
                                                                                             ])} 
                                                                                             title={"Tuples/sec"} height="180px" 
                                                                         />
@@ -706,10 +731,10 @@ function App() {
                                                                                 <Link fontSize="body-s" onFollow={() =>  onClickMetric('xactTotal','Transactions/sec')}>Transactions/sec</Link>
                                                                             </td>
                                                                             <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('numbackends','Sessions')}>Sessions</Link>
+                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('tuples','Tuples/sec')}>Tuples/sec</Link>
                                                                             </td>
                                                                             <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('tuples','Tuples/sec')}>Tuples/sec</Link>
+                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('numbackends','Sessions')}>Sessions</Link>
                                                                             </td>
                                                                             <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                                                 <Link fontSize="body-s" onFollow={() => onClickMetric('cpu','CPU(%)')}>CPU(%)</Link>
@@ -726,7 +751,7 @@ function App() {
                                                                         </tr>
                                                                         
                                                                         
-                                                                        {clusterStats.nodes.map((item,key) => (
+                                                                        {clusterStats.cluster.nodes.map((item,key) => (
                                                                                            
                                                                                                  <AuroraNode
                                                                                                     sessionId = {cnf_connection_id}
@@ -749,8 +774,31 @@ function App() {
                                           
                                       },
                                       {
-                                        label: "CloudWatch Metrics",
+                                        label: "Active Sessions",
                                         id: "tab02",
+                                        content: 
+                                         
+                                          <>
+                                              <table style={{"width":"100%", "padding": "1em", "background-color ": "black"}}>
+                                                    <tr>  
+                                                        <td>
+                                                            <CustomTable
+                                                              columnsTable={columnsTable}
+                                                              visibleContent={visibleContent}
+                                                              dataset={clusterStats['cluster']['sessions']}
+                                                              title={"Active Sessions"}
+                                                              description={"Top 10 database active sessions"}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                </table> 
+                                                
+                                          </>
+                                          
+                                      },
+                                      {
+                                        label: "CloudWatch Metrics",
+                                        id: "tab03",
                                         content: 
                                           
                                           <>    
@@ -1162,7 +1210,7 @@ function App() {
                                       },
                                       {
                                         label: "Cluster Information",
-                                        id: "tab03",
+                                        id: "tab04",
                                         content: 
                                          
                                           <>
@@ -1205,8 +1253,8 @@ function App() {
                                                                             <div>{cnf_nodes}</div>
                                                                         </div>
                                                                         <div>
-                                                                            <Box variant="awsui-key-label">ResourceId</Box>
-                                                                            <div>{cnf_resource_id}</div>
+                                                                            <Box variant="awsui-key-label">ConnectionId</Box>
+                                                                            <div>{clusterStats['cluster']['connectionId']}</div>
                                                                         </div>
                                                                     </ColumnLayout>
                                                                     <br/>

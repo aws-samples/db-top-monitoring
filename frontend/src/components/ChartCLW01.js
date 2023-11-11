@@ -138,7 +138,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                             data.data.MetricDataResults.forEach(function(item) {
                                    
                                     currentData.push({name : item.Label, data : item.Values.reverse()});
-                                    average = item.Values.reduce((a, b) => a + b, 0) / item.Values.length;
+                                    average = item.Values.reduce((a, b) => ( a || 0 ) + ( b || 0 ) , 0) / item.Values.length;
                                     max = Math.max(...item.Values);
                                     min = Math.min(...item.Values);
                                     switch (format) {
@@ -236,7 +236,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                     <table style={{"width":"100%"}}>
                         <tr>  
                            <td style={{"width":"30%", "text-align":"center"}}>  
-                            <span style={{"font-size": "26px", "font-weight": "500","font-family": "Orbitron", "color": font_color_value }}>{chartData.metric}</span>
+                            <span style={{"font-size": "22px", "font-weight": "500","font-family": "Orbitron", "color": font_color_value }}>{chartData.metric}</span>
                             <br/>  
                             <span style={{"font-size": "10px", "font-weight": "500", }}>{subtitle}</span>
                             <br/>  

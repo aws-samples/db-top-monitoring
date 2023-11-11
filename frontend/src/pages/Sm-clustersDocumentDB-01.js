@@ -24,7 +24,6 @@ import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 import Box from "@awsui/components-react/box";
 import ColumnLayout from "@awsui/components-react/column-layout";
-import Container from "@awsui/components-react/container";
 
 import '@aws-amplify/ui-react/styles.css';
 
@@ -130,7 +129,7 @@ function Login() {
             Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
 
             // Get Authentication
-            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/documentdb/connection/auth/`,{
+            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/documentdb/cluster/authentication/`,{
                 params: { 
                           clusterId : selectedItems[0]['identifier'],
                           host: selectedItems[0]['endpoint'], 
@@ -139,7 +138,8 @@ function Login() {
                           password: txtPassword, 
                           engine: selectedItems[0]['engine'],
                           instance : selectedItems[0]['instance'],
-                          mode : "cluster"
+                          mode : "cluster",
+                          engineType : "documentdb"
                   
                 }
             }).then((data)=>{
@@ -185,7 +185,7 @@ function Login() {
             })
             .catch((err) => {
                 
-                console.log('Timeout API Call : /api/documentdb/connection/auth/');
+                console.log('Timeout API Call : /api/documentdb/cluster/authentication/');
                 console.log(err)
             });
             
@@ -197,7 +197,7 @@ function Login() {
    async function gatherVersion (){
 
         //-- Application Update
-        var appVersionObject = await applicationVersionUpdate({ codeId : "dbtop", moduleId: "aurora"} );
+        var appVersionObject = await applicationVersionUpdate({ codeId : "dbtop", moduleId: "documentdb"} );
         
         if (appVersionObject.release > configuration["apps-settings"]["release"] && configuration["apps-settings"]["release-enforcement"] ){
           setVersionMessage([

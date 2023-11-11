@@ -9,7 +9,10 @@ import ColumnLayout from "@awsui/components-react/column-layout";
 import { SplitPanel } from '@awsui/components-react';
 import AppLayout from "@awsui/components-react/app-layout";
 
-import Icon from "@awsui/components-react/icon";
+import { createLabelFunction } from '../components/Functions';
+import CustomTable from "../components/Table01";
+
+import Flashbar from "@awsui/components-react/flashbar";
 import StatusIndicator from "@awsui/components-react/status-indicator";
 import Spinner from "@awsui/components-react/spinner";
 
@@ -19,12 +22,10 @@ import Link from "@awsui/components-react/link";
 import Header from "@awsui/components-react/header";
 import Container from "@awsui/components-react/container";
 import DocumentDBNode  from '../components/CompDocumentDBNode01';
-import CompSparkline01  from '../components/ChartSparkline01';
 import CompMetric01  from '../components/Metric01';
 import ChartLine02  from '../components/ChartLine02';
 import CLWChart  from '../components/ChartCLW03';
 import ChartRadialBar01 from '../components/ChartRadialBar01';
-import ChartBar01 from '../components/ChartBar01';
 import ChartColumn01 from '../components/ChartColumn01';
 
 export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
@@ -44,6 +45,10 @@ var CryptoJS = require("crypto-js");
 
 
 function App() {
+    
+    //-- Connection Usage
+    const [connectionMessage, setConnectionMessage] = useState([]);
+    
     
     //-- Gather Parameters
     const [params]=useSearchParams();
@@ -68,7 +73,6 @@ function App() {
     const cnf_connection_id=parameter_object_values["session_id"];  
     const cnf_identifier=parameter_object_values["rds_id"];  
     const cnf_engine=parameter_object_values["rds_engine"];
-    const cnf_engine_class=parameter_object_values["rds_class"];
     const cnf_az=parameter_object_values["rds_az"];
     const cnf_version=parameter_object_values["rds_version"];
     const cnf_resource_id=parameter_object_values["rds_resource_id"];
@@ -90,10 +94,6 @@ function App() {
     //--######## RealTime Metric Features
     
     
-      
-    const [selectedItems,setSelectedItems] = useState([{ identifier: "" }]);
-    
-    
     //-- Variable for Paging
     const [currentPageIndex,setCurrentPageIndex] = useState(1);
     var pageId = useRef(1);
@@ -101,20 +101,20 @@ function App() {
     var totalPages = Math.trunc( parameter_object_values['rds_nodes'] / itemsPerPage) + (  parameter_object_values['rds_nodes'] % itemsPerPage != 0 ? 1 : 0 ) 
     
     //-- Variable for Cluster Stats
-    var timeNow = new Date();
     const nodeList = useRef("");
     const [clusterStats,setClusterStats] = useState({ 
                                 cluster : {
                                             status : "pending",
                                             size : "-",
-                                            shards : 0,
-                                            nodes : 0,
+                                            totalNodes : 0,
                                             cpu: 0,
                                             memory: 0,
                                             ioreads: 0,
                                             iowrites: 0,
                                             netin: 0,
                                             netout: 0,
+                                            network: 0,
+                                            iops : 0,
                                             connectionsCurrent : 0,
                                             connectionsAvailable : 0,
                                             connectionsCreated : 0,
@@ -124,14 +124,18 @@ function App() {
                                             opsDelete : 0,
                                             opsGetmore : 0,
                                             opsCommand : 0,
+                                            operations : 0,
                                             docsDeleted : 0,
                                             docsInserted : 0,
                                             docsReturned : 0,
                                             docsUpdated : 0,
+                                            docops : 0,
                                             transactionsActive : 0,
                                             transactionsCommited : 0,
                                             transactionsAborted : 0,
                                             transactionsStarted : 0,
+                                            lastUpdate : "-",
+                                            connectionId : "-",
                                             history : {
                                                         cpu: [],
                                                         memory: [],
@@ -139,6 +143,8 @@ function App() {
                                                         iowrites: [],
                                                         netin: [],
                                                         netout: [],
+                                                        network: [],
+                                                        iops: [],
                                                         connectionsCurrent : [],
                                                         connectionsAvailable : [],
                                                         connectionsCreated : [],
@@ -148,108 +154,116 @@ function App() {
                                                         opsDelete : [],
                                                         opsGetmore : [],
                                                         opsCommand : [],
+                                                        operations : [],
                                                         docsDeleted : [],
                                                         docsInserted : [],
                                                         docsReturned : [],
                                                         docsUpdated : [],
+                                                        docops : [],
                                                         transactionsActive : [],
                                                         transactionsCommited : [],
                                                         transactionsAborted : [],
                                                         transactionsStarted : []
-                                            }
+                                            },
+                                            nodes : [],
+                                            sessions : [],
                                 },
-                                nodes : [],
+                                
                 });
                 
-
-     
     
+    //-- Active Sessions
+    
+    const columnsTable = [
+                  {id: 'instanceId',header: 'InstanceId',cell: item => item['instanceId'],ariaLabel: createLabelFunction('instanceId'),sortingField: 'instanceId',},
+                  {id: 'opid',header: 'PID',cell: item => item['opid'],ariaLabel: createLabelFunction('opid'),sortingField: 'opid',},
+                  {id: 'db',header: 'Database',cell: item => item['$db'] || "-",ariaLabel: createLabelFunction('db'),sortingField: 'db',},
+                  {id: 'client',header: 'Host',cell: item => item['client'],ariaLabel: createLabelFunction('client'),sortingField: 'client',},
+                  {id: 'WaitState',header: 'WaitType',cell: item => item['WaitState'] || "-",ariaLabel: createLabelFunction('WaitState'),sortingField: 'WaitState',},
+                  {id: 'secs_running',header: 'ElapsedTime(sec)',cell: item => item['secs_running'],ariaLabel: createLabelFunction('secs_running'),sortingField: 'secs_running',},
+                  {id: 'ns',header: 'Namespace',cell: item => item['ns'],ariaLabel: createLabelFunction('ns'),sortingField: 'ns',},
+                  {id: 'op',header: 'Operation',cell: item => item['op'],ariaLabel: createLabelFunction('op'),sortingField: 'op',},
+                  {id: 'command',header: 'Command',cell: item =>  String(JSON.stringify(item['command'])),ariaLabel: createLabelFunction('command'),sortingField: 'command',}
+                  
+    ];
+    
+    const visibleContent = ['instanceId', 'opid', 'db', 'client', 'WaitState', 'secs_running', 'ns', 'command'];
+
     //-- Function Gather Metrics
     async function openClusterConnection() {
         
         var api_url = configuration["apps-settings"]["api_url"];
         Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
-        await Axios.post(`${api_url}/api/documentdb/cluster/connection/open/`,{
+        await Axios.post(`${api_url}/api/documentdb/cluster/open/connection/`,{
                       params: { 
                                 connectionId : cnf_connection_id,
                                 clusterId : cnf_identifier,
                                 username : cnf_username,
-                                password : cnf_password
+                                password : cnf_password,
+                                engineType : "documentdb"
                              }
               }).then((data)=>{
                 
                 nodeList.current = data.data.nodes;
+                if (data.data.newObject==false) {
+                    setConnectionMessage([
+                                  {
+                                    type: "info",
+                                    content: "Cluster connection already created at [" + data.data.creationTime + "] with identifier [" +  data.data.connectionId  + "], this connection will be re-used to gather metrics.",
+                                    dismissible: true,
+                                    dismissLabel: "Dismiss message",
+                                    onDismiss: () => setConnectionMessage([]),
+                                    id: "message_1"
+                                  }
+                    ]);
+                }
                   
               })
               .catch((err) => {
-                  console.log('Timeout API Call : /api/documentdb/cluster/connection/open/' );
+                  console.log('Timeout API Call : /api/documentdb/cluster/open/connection/' );
                   console.log(err);
                   
               });
               
     }
     
-    //-- Function Cluster Update Stats
-    async function updateClusterStats() {
-        
-        var api_url = configuration["apps-settings"]["api_url"];
-        
-        Axios.get(`${api_url}/api/documentdb/cluster/stats/update`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier }
-                  }).then((data)=>{
-                   
-                   
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/documentdb/cluster/stats/update');
-                  console.log(err);
-                  
-              });
-              
-    }
-    
-
 
     //-- Function Cluster Gather Stats
     async function gatherClusterStats() {
         
-        if (currentTabId.current != "tab01") {
-            return;
-        }
+        if (currentTabId.current == "tab01" || currentTabId.current == "tab02") {
         
-        var api_url = configuration["apps-settings"]["api_url"];
+            var api_url = configuration["apps-settings"]["api_url"];
+            
+            Axios.get(`${api_url}/api/documentdb/cluster/gather/stats/`,{
+                          params: { 
+                                    connectionId : cnf_connection_id, 
+                                    clusterId : cnf_identifier, 
+                                    beginItem : ( (pageId.current-1) * itemsPerPage), 
+                                    endItem : (( (pageId.current-1) * itemsPerPage) + itemsPerPage),
+                                    engineType : "documentdb",
+                                    includeSessions : ( currentTabId.current == "tab02" ? 1 : 0)
+                          }
+                      }).then((data)=>{
+                       
+                       var info = data.data.cluster;
+                       setClusterStats({ cluster : {...info} });
+                         
+                  })
+                  .catch((err) => {
+                      console.log('Timeout API Call : /api/documentdb/cluster/gather/stats/' );
+                      console.log(err);
+                      
+                  });
         
-        Axios.get(`${api_url}/api/documentdb/cluster/stats/gather`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier, beginItem : ( (pageId.current-1) * itemsPerPage), endItem : (( (pageId.current-1) * itemsPerPage) + itemsPerPage) }
-                  }).then((data)=>{
-                   
-                   setClusterStats({
-                         cluster : data.data.cluster,
-                         nodes : data.data.nodes,
-                    });
-                    
-                     
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/documentdb/cluster/stats/gather' );
-                  console.log(err);
-                  
-              });
-              
+        }      
         
         
     }
 
 
-
     useEffect(() => {
         openClusterConnection();
-    }, []);
-    
-    useEffect(() => {
-        const id = setInterval(updateClusterStats, configuration["apps-settings"]["refresh-interval-documentdb-metrics"]);
-        return () => clearInterval(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     
     
@@ -258,8 +272,6 @@ function App() {
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    
-    
     
     
     //-- Function Handle Logout
@@ -288,8 +300,8 @@ function App() {
     
     const closeDatabaseConnection = () => {
         
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/documentdb/cluster/connection/close/`,{
-                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier }
+        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/documentdb/cluster/close/connection/`,{
+                      params: { connectionId : cnf_connection_id, clusterId : cnf_identifier, engineType : "documentdb" }
                   }).then((data)=>{
                       closeTabWindow();
                       sessionStorage.removeItem(parameter_code_id);
@@ -404,14 +416,14 @@ function App() {
                             <td style={{"width":"30%", "padding-left": "1em"}}>  
                                 
                                 <ChartColumn01 
-                                    series={metricDetailsToColumnsBar(clusterStats['nodes'],metricDetailsIndex.index)} 
+                                    series={metricDetailsToColumnsBar(clusterStats['cluster']['nodes'],metricDetailsIndex.index)} 
                                     height="200px" 
                                 />
                                 
                             </td>
                             <td style={{"width":"70%", "padding-left": "1em"}}>  
                                  <ChartLine02 
-                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['nodes'],metricDetailsIndex.index))} 
+                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['cluster']['nodes'],metricDetailsIndex.index))} 
                                     height="200px" 
                                   />
                             </td>
@@ -425,9 +437,10 @@ function App() {
         }
         content={
             <>
+                            <Flashbar items={connectionMessage} />
                             <table style={{"width":"100%"}}>
                                 <tr>  
-                                    <td style={{"width":"40%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
+                                    <td style={{"width":"55%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
                                         <SpaceBetween direction="horizontal" size="xs">
                                             { clusterStats['cluster']['status'] != 'available' &&
                                                 <Spinner size="big" />
@@ -439,9 +452,13 @@ function App() {
                                         <StatusIndicator type={clusterStats['cluster']['status'] === 'available' ? 'success' : 'pending'}> {clusterStats['cluster']['status']} </StatusIndicator>
                                         <Box variant="awsui-key-label">Status</Box>
                                     </td>
-                                    <td style={{"width":"45%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
-                                        <div>{clusterStats['cluster']['nodes']}</div>
+                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['totalNodes']}</div>
                                         <Box variant="awsui-key-label">Nodes</Box>
+                                    </td>
+                                    <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                                        <div>{clusterStats['cluster']['lastUpdate']}</div>
+                                        <Box variant="awsui-key-label">LastUpdate</Box>
                                     </td>
                                     
                                 </tr>
@@ -551,7 +568,7 @@ function App() {
                                                                     <tr> 
                                                                         <td style={{"width":"10%", "padding-left": "1em"}}>  
                                                                             <CompMetric01 
-                                                                                value={ (clusterStats.cluster.opsInsert ) || 0}
+                                                                                value={ clusterStats.cluster.opsInsert  || 0}
                                                                                 title={"opsInsert/sec"}
                                                                                 precision={0}
                                                                                 format={3}
@@ -583,6 +600,26 @@ function App() {
                                                                             <CompMetric01 
                                                                                 value={clusterStats.cluster.opsUpdate || 0}
                                                                                 title={"opsUpdate/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.opsGetmore || 0}
+                                                                                title={"opsGetmore/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.opsCommand || 0}
+                                                                                title={"opsCommand/sec"}
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
@@ -629,10 +666,26 @@ function App() {
                                                                                 fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
+                                                                    </tr>
+                                                            </table>
+                                                            <br/>
+                                                            <br/>
+                                                            <table style={{"width":"100%"}}>
+                                                                    <tr> 
+                                                                        <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={ clusterStats.cluster.connectionsCurrent  || 0}
+                                                                                title={"Connections"}
+                                                                                precision={0}
+                                                                                format={3}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
                                                                         <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
                                                                             <CompMetric01 
-                                                                                value={ (clusterStats.cluster.connectionsCurrent ) || 0}
-                                                                                title={"Connections"}
+                                                                                value={clusterStats.cluster.connectionsAvailable || 0}
+                                                                                title={"ConnectionsAvailable"}
                                                                                 precision={0}
                                                                                 format={3}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
@@ -649,10 +702,78 @@ function App() {
                                                                                 fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.transactionsActive || 0}
+                                                                                title={"transActive"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.transactionsCommited || 0}
+                                                                                title={"transCommited/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.transactionsAborted || 0}
+                                                                                title={"transAborted/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.ioreads || 0}
+                                                                                title={"IO Reads/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.iowrites || 0}
+                                                                                title={"IO Writes/sec"}
+                                                                                precision={0}
+                                                                                format={1}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.netin || 0}
+                                                                                title={"Network-In"}
+                                                                                precision={0}
+                                                                                format={2}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
+                                                                        <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                                            <CompMetric01 
+                                                                                value={clusterStats.cluster.netout || 0}
+                                                                                title={"Network-Out"}
+                                                                                precision={0}
+                                                                                format={2}
+                                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                                fontSizeValue={"16px"}
+                                                                            />
+                                                                        </td>
                                                                     </tr>
-                                                                    
                                                             </table>  
-                                                            <br />
                                                             <br />
                                                             <br />
                                                             <table style={{"width":"100%"}}>
@@ -759,7 +880,7 @@ function App() {
                                                                             </td>
                                                                         </tr>
                                                                                 
-                                                                        {clusterStats.nodes.map((item,key) => (
+                                                                        {clusterStats.cluster.nodes.map((item,key) => (
                                                                                            
                                                                                                  <DocumentDBNode
                                                                                                     sessionId = {cnf_connection_id}
@@ -782,8 +903,31 @@ function App() {
                                           
                                       },
                                       {
-                                        label: "CloudWatch Metrics",
+                                        label: "Active Sessions",
                                         id: "tab02",
+                                        content: 
+                                         
+                                          <>
+                                              <table style={{"width":"100%", "padding": "1em", "background-color ": "black"}}>
+                                                    <tr>  
+                                                        <td>
+                                                            <CustomTable
+                                                              columnsTable={columnsTable}
+                                                              visibleContent={visibleContent}
+                                                              dataset={clusterStats['cluster']['sessions']}
+                                                              title={"Active Sessions"}
+                                                              description={"Top 10 database active sessions"}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                </table> 
+                                                
+                                          </>
+                                          
+                                      },
+                                      {
+                                        label: "CloudWatch Metrics",
+                                        id: "tab03",
                                         content: 
                                           
                                           <>    
@@ -1094,7 +1238,7 @@ function App() {
                                       },
                                       {
                                         label: "Cluster Information",
-                                        id: "tab03",
+                                        id: "tab04",
                                         content: 
                                          
                                           <>
@@ -1146,8 +1290,8 @@ function App() {
                                                                             <div>{cnf_nodes}</div>
                                                                         </div>
                                                                         <div>
-                                                                            <Box variant="awsui-key-label">ResourceId</Box>
-                                                                            <div>{cnf_resource_id}</div>
+                                                                            <Box variant="awsui-key-label">ConnectionId</Box>
+                                                                            <div>{clusterStats['cluster']['connectionId']}</div>
                                                                         </div>
                                                                     </ColumnLayout>
                                                                     <br/>

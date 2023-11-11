@@ -83,7 +83,7 @@ export default function App() {
                     { type: 'button', iconName: 'settings', title: 'Settings', ariaLabel: 'Settings' },
                     {
                       type: 'menu-dropdown',
-                      text:  /*user.signInUserSession.idToken.payload.email*/ "myuser@example.com",
+                      text:  user.signInUserSession.idToken.payload.email /* "myuser@example.com"*/,
                       iconName: 'user-profile',
                       items: profileActions,
                       onItemClick : handleClickMenu
