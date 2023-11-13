@@ -9,7 +9,7 @@ import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 import Button from "@awsui/components-react/button";
 
-const TableComponent = memo(({columnsTable,visibleContent, dataset, title }) => {
+const TableComponent = memo(({columnsTable,visibleContent, dataset, title, description = "" }) => {
 
     
     const [selectedItems,setSelectedItems] = useState([{ identifier: "" }]);
@@ -63,6 +63,7 @@ const TableComponent = memo(({columnsTable,visibleContent, dataset, title }) => 
                         <Header
                           variant="h2"
                           counter= {"(" + dataset.length + ")"} 
+                          description={description}
                         >
                           {title}
                         </Header>

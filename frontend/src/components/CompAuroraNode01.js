@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react'
-import Axios from 'axios';
+import { useState,  useRef, memo } from 'react'
 import ChartLine02 from './ChartLine02';
 import ChartRadialBar01 from './ChartRadialBar01';
 
@@ -13,8 +12,6 @@ import CompMetric04 from './Metric04';
 import { configuration } from './../pages/Configs';
 import Badge from "@awsui/components-react/badge";
 import Link from "@awsui/components-react/link";
-import Box from "@awsui/components-react/box";
-import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 
 
@@ -22,7 +19,6 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
 
     const [detailsVisible, setDetailsVisible] = useState(false);
     const detailsVisibleState = useRef(false);
-    const activeSessions = useRef([]);
 
     const columnsTable = [
                   {id: 'ThreadID',header: 'ThreadID',cell: item => item['ThreadID'],ariaLabel: createLabelFunction('ThreadID'),sortingField: 'ThreadID',},
@@ -38,59 +34,12 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
     
     const visibleContent = ['ThreadID', 'State', 'Username', 'Host', 'Database', 'Command', 'ElapsedTime', 'SQLText' ];
     
-   //-- Function Gather Active Sessions
-    async function fetchSessions() {
-        //--- API Call Gather Sessions
-        if (detailsVisibleState.current == true) {
-            
-            
-            
-                //--- API Call Gather Sessions
-                var api_params = {
-                              connectionId: sessionId,
-                              clusterId : clusterId,
-                              instanceId : nodeStats.name,
-                              sql_statement: `
-                                                SELECT ID as 'ThreadID',USER as 'Username',HOST as 'Host',DB as 'Database',COMMAND as 'Command',SEC_TO_TIME(TIME) as 'Time',STATE as 'State',INFO as 'SQLText' FROM INFORMATION_SCHEMA.PROCESSLIST WHERE COMMAND <> 'Sleep' AND COMMAND <> 'Daemon' AND CONNECTION_ID()<> ID ORDER BY TIME DESC LIMIT 250
-                                             `
-                              };
-                
-                      Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aurora/mysql/cluster/sql/`,{
-                      params: api_params
-                      }).then((data)=>{
-                        
-                          activeSessions.current = data.data;
-                          
-                      })
-                      .catch((err) => {
-                          console.log('Timeout API Call : /api/aurora/mysql/cluster/sql/' );
-                          console.log(err)
-                      });
-              
-                
-            
-        }
-        else {
-                activeSessions.current = [];
-        }
-    
-    }
-    
-   
     function onClickNode() {
 
         detailsVisibleState.current = (!(detailsVisibleState.current));
         setDetailsVisible(detailsVisibleState.current);
 
     }
-
-
-    useEffect(() => {
-        const id = setInterval(fetchSessions, configuration["apps-settings"]["refresh-interval-aurora-pgs-sessions"]);
-        return () => clearInterval(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-    
 
 
     return (
@@ -104,7 +53,7 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         <Badge color="red"> R </Badge>
                     }
                     { nodeStats.role === "-" &&
-                        <Badge>-</Badge>
+                        <Badge> - </Badge>
                     }
                     &nbsp;
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{nodeStats.name}</Link>
@@ -434,7 +383,7 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                                         <CustomTable
                                                   columnsTable={columnsTable}
                                                   visibleContent={visibleContent}
-                                                  dataset={activeSessions.current}
+                                                  dataset={nodeStats.sessions}
                                                   title={"Active Sessions"}
                                         />
                                               

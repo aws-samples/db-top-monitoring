@@ -1,37 +1,44 @@
+//-- React Events
 import { useState,useEffect,useRef } from 'react';
 import Axios from 'axios'
 import { useSearchParams } from 'react-router-dom';
 
-import CustomHeader from "../components/Header";
-import CustomTable from "../components/Table01";
+//-- AWS UI Objects
 import AppLayout from "@awsui/components-react/app-layout";
-import { configuration } from './Configs';
-import { classMetric, getMatchesCountText, createLabelFunction, paginationLabels, pageSizePreference, EmptyState } from '../components/Functions';
-
 import { useCollection } from '@cloudscape-design/collection-hooks';
 import {CollectionPreferences,Pagination } from '@awsui/components-react';
 import TextFilter from "@awsui/components-react/text-filter";
-
+import Spinner from "@awsui/components-react/spinner";
+import StatusIndicator from "@awsui/components-react/status-indicator";
+import Flashbar from "@awsui/components-react/flashbar";
 import Container from "@awsui/components-react/container";
 import Tabs from "@awsui/components-react/tabs";
 import ColumnLayout from "@awsui/components-react/column-layout";
 import Badge from "@awsui/components-react/badge";
 import ProgressBar from "@awsui/components-react/progress-bar";
-
-import ChartLine02  from '../components/ChartLine02';
-import CLWChart  from '../components/ChartCLW01';
-import CompMetric02  from '../components/Metric02';
-import CompMetric03  from '../components/Metric03';
-
 import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 import Button from "@awsui/components-react/button";
-
 import Box from "@awsui/components-react/box";
 import SpaceBetween from "@awsui/components-react/space-between";
 import Toggle from "@awsui/components-react/toggle";
 import { SplitPanel } from '@awsui/components-react';
 
+//-- Custom Objects
+import CustomHeader from "../components/Header";
+import CustomTable from "../components/Table01";
+import CompMetric02  from '../components/Metric02';
+import CompMetric03  from '../components/Metric03';
+import ChartLine02  from '../components/ChartLine02';
+import CLWChart  from '../components/ChartCLW01';
+
+//-- Custom Libraries
+import { configuration } from './Configs';
+import { getMatchesCountText, createLabelFunction, paginationLabels, pageSizePreference, EmptyState } from '../components/Functions';
+
+
+
+//-- Variables
 export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
   preferencesTitle: 'Split panel preferences',
   preferencesPositionLabel: 'Split panel position',
@@ -45,12 +52,15 @@ export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
   resizeHandleAriaLabel: 'Resize split panel',
 };
 
-
 var CryptoJS = require("crypto-js");
 
 export default function App() {
+    
 
     //--######## Global Settings
+    
+    //-- Connection Usage
+    const [connectionMessage, setConnectionMessage] = useState([]);
     
     
     //-- Variable for Active Tabs
@@ -65,14 +75,11 @@ export default function App() {
     var parameter_object_bytes = CryptoJS.AES.decrypt(parameter_id, parameter_code_id);
     var parameter_object_values = JSON.parse(parameter_object_bytes.toString(CryptoJS.enc.Utf8));
     
-    
     //-- Configuration variables
     const cnf_connection_id=parameter_object_values["session_id"];  
     const cnf_rds_id=parameter_object_values["rds_id"];  
     const cnf_rds_host=parameter_object_values["rds_host"];  
     const cnf_rds_engine=parameter_object_values["rds_engine"];
-    const cnf_rds_resource_id=parameter_object_values["rds_resource_id"];
-    
     
     //-- Add token header
     Axios.defaults.headers.common['x-token'] = sessionStorage.getItem(cnf_connection_id);
@@ -82,8 +89,7 @@ export default function App() {
     document.title = configuration["apps-settings"]["application-title"] + ' - ' + cnf_rds_host;
    
    
-    
-    //--######## RealTime Metric Features
+    //--######## RealTime Metric
     
     //-- Variable for Split Panels
     const [splitPanelShow,setsplitPanelShow] = useState(false);
@@ -95,70 +101,96 @@ export default function App() {
     const [collectionState, setcollectionState] = useState(true);
     
     //-- Performance Counters
-
-    const initProcess = useRef(0);
-    const metricObjectGlobal = useRef(new classMetric([
-                                                        {name : "xact_commit", history : 30 },
-                                                        {name : "tup_returned", history : 30 },
-                                                        {name : "tup_fetched", history : 30 },
-                                                        {name : "tup_inserted", history : 30 },
-                                                        {name : "tup_deleted", history : 30},
-                                                        {name : "tup_updated", history : 30 },
-                                                        {name : "Sessions", history : 30 },
-                                                        {name : "Cpu_total", history : 50 },
-                                                        {name : "Cpu_user", history : 50 },
-                                                        {name : "Cpu_system", history : 50 },
-                                                        {name : "Cpu_wait", history : 50 },
-                                                        {name : "Cpu_irq", history : 50 },
-                                                        {name : "Cpu_guest", history : 50 },
-                                                        {name : "Cpu_steal", history : 50 },
-                                                        {name : "Cpu_nice", history : 50 },
-                                                        {name : "Memory_total", history : 50 },
-                                                        {name : "Memory_active", history : 50 },
-                                                        {name : "Memory_inactive", history : 50 },
-                                                        {name : "Memory_free", history : 50 },
-                                                        {name : "IO_reads_rsdev", history : 50 },
-                                                        {name : "IO_reads_filesystem", history : 50 },
-                                                        {name : "IO_writes_rsdev", history : 50 },
-                                                        {name : "IO_writes_filesystem", history : 50 },
-                                                        {name : "Network_tx", history : 50 },
-                                                        {name : "Network_rx", history : 50 }
-                                                        
-       
-    ]));
+    const [instanceStats,setInstanceStats] = useState({ 
+                                                  cpuUsage : 0,
+                                                  cpuTotal : 0,
+                                                  cpuUser : 0,
+                                                  cpuSys : 0,
+                                                  cpuWait : 0,
+                                                  cpuIrq : 0,
+                                                  cpuGuest : 0,
+                                                  cpuSteal : 0,
+                                                  cpuNice : 0,
+                                                  vCpus : 0,
+                                                  memoryUsage : 0,
+                                                  memoryTotal : 0,
+                                                  memoryActive : 0,
+                                                  memoryInactive : 0,
+                                                  memoryFree : 0,
+                                                  ioreadsRsdev : 0,
+                                                  ioreadsFilesystem : 0,
+                                                  ioreads : 0,
+                                                  iowritesRsdev : 0,
+                                                  iowritesFilesystem : 0,
+                                                  iowrites: 0,
+                                                  iops : 0,
+                                                  tps : 0,
+                                                  ioqueue : 0,
+                                                  networkTx : 0,
+                                                  networkRx : 0,
+                                                  network : 0, 
+                                                  tuples : 0, 
+                                                  xactTotal : 0, 
+                                                  xactCommit : 0, 
+                                                  xactRollback : 0, 
+                                                  tupReturned : 0, 
+                                                  tupFetched : 0, 
+                                                  tupInserted : 0, 
+                                                  tupDeleted : 0, 
+                                                  tupUpdated : 0, 
+                                                  numbackends : 0, 
+                                                  numbackendsActive : 0, 
+                                                  status : "-",
+                                                  lastUpdate : "-",
+                                                  az : "-",
+                                                  hostname : "-",
+                                                  uptime : "-",
+                                                  history : {
+                                                            cpuUsage : [],
+                                                            cpuTotal : [],
+                                                            cpuUser : [],
+                                                            cpuSys : [],
+                                                            cpuWait : [],
+                                                            cpuIrq : [],
+                                                            cpuGuest : [],
+                                                            cpuSteal : [],
+                                                            cpuNice : [],
+                                                            vCpus : [],
+                                                            memoryUsage : [],
+                                                            memoryTotal : [],
+                                                            memoryActive : [],
+                                                            memoryInactive : [],
+                                                            memoryFree : [],
+                                                            ioreadsRsdev : [],
+                                                            ioreadsFilesystem : [],
+                                                            ioreads : [],
+                                                            iowritesRsdev : [],
+                                                            iowritesFilesystem : [],
+                                                            iowrites: [],
+                                                            iops : [],
+                                                            tps : [],
+                                                            ioqueue : [],
+                                                            networkTx : [],
+                                                            networkRx : [],
+                                                            network : [],
+                                                            tuples : [],
+                                                            xactTotal : [],
+                                                            xactCommit : [],
+                                                            xactRollback : [],
+                                                            tupReturned : [],
+                                                            tupFetched : [],
+                                                            tupInserted : [],
+                                                            tupDeleted : [],
+                                                            tupUpdated : [],
+                                                            numbackends : [],
+                                                            numbackendsActive : [],
+                                                  },
+                                                  sessions : [],
+                                                  processes : []
+      });     
     
     
-    //-- Metric Variables
-    const [dataMetricRealTime,setDataMetricRealTime] = useState({
-                                                                  Transactions : [],
-                                                                  Operations : [],
-                                                                  dataSessions: [],
-                                                                  dataCounters: [],
-                                                                  timestamp : 0,
-                                                                  refObject : new classMetric([
-                                                                                                {name : "xact_commit", history : 30 },
-                                                                                                {name : "tup_returned", history : 30 },
-                                                                                                {name : "tup_fetched", history : 30 },
-                                                                                                {name : "tup_inserted", history : 30 },
-                                                                                                {name : "tup_deleted", history : 30 },
-                                                                                                {name : "tup_updated", history : 30 },
-                                                                                                {name : "Queries", history : 30 }
-                                                                                              ])
-                                                                });
-                                                                
-
-    const [dataMetricRealTimeSession,setDataMetricRealTimeSession] = useState({
-                                                                  SessionsTotal : [],
-                                                                  Sessions : [],
-                                                                  timestamp : 0,
-                                                                });
-    
-    
-    const dataMetricQuery="SELECT SUM(numbackends) as numbackends,SUM(tup_returned) as tup_returned, SUM(tup_fetched) as tup_fetched, SUM(tup_inserted) as tup_inserted,SUM(tup_updated) as tup_updated,SUM(tup_deleted) as tup_deleted, SUM(blk_read_time) as blk_read_time, SUM(blk_write_time) as blk_write_time, SUM(xact_commit) as xact_commit FROM pg_stat_database";
-    const dataSessionQuery = 'select pid as "PID",usename as "Username",state as "State",wait_event as "WaitEvent",datname as "Database",CAST(CURRENT_TIMESTAMP-query_start AS VARCHAR)  as "ElapsedTime",application_name as "AppName",client_addr as "Host",query as "SQLText" from pg_stat_activity where pid <> pg_backend_pid() and state = \'active\' order by query_start asc limit 250';
-    
-    
-    //-- Variables Table - Sessions
+    //--######## Variables for Table - Sessions
     const columnsTable = [
                   {id: 'PID',header: 'PID',cell: item => item['PID'],ariaLabel: createLabelFunction('PID'),sortingField: 'ThreadID',},
                   {id: 'Username',header: 'Username',cell: item => item['Username'],ariaLabel: createLabelFunction('Username'),sortingField: 'Username',},
@@ -195,7 +227,7 @@ export default function App() {
     const [preferences, setPreferences] = useState({ pageSize: 10, visibleContent: ['PID', 'Username', 'State', 'Host', 'WaitEvent', 'Database', 'ElapsedTime', 'AppName', 'SQLText' ] });
     
     const { items, actions, filteredItemsCount, collectionProps, filterProps, paginationProps } = useCollection(
-                dataMetricRealTimeSession['Sessions'],
+                instanceStats['sessions'],
                 {
                   filtering: {
                     empty: <EmptyState title="No Records" />,
@@ -212,10 +244,11 @@ export default function App() {
                 }
     );
   
-   
+    
     
     
     //--######## Enhanced Monitoring Feature
+    
     const columnsTableEm = [
                   {id: 'id',header: 'PID',cell: item => item['id'],ariaLabel: createLabelFunction('id'),sortingField: 'id',},
                   {id: 'parentID',header: 'ParentPID',cell: item => item['parentID'] || "-",ariaLabel: createLabelFunction('parentID'),sortingField: 'parentID',},
@@ -229,293 +262,88 @@ export default function App() {
     ];
 
     const visibleContentEm = ['id', 'parentID', 'name', 'cpuUsedPc', 'memoryUsedPc', 'rss', 'vmlimit', 'vss', 'tgid' ];
-
-    
-    const [dataEnhancedMonitor,setdataEnhancedMonitor] = useState({ 
-                                              counters : {
-                                                            cpu: [{name:'pct_usage',value:0},{name:'total_vcpu', value: 0}],
-                                                            cpu_detail : [
-                                                                  {name:'user', value: 0},
-                                                                  {name:'system', value: 0},
-                                                                  {name:'wait', value: 0},
-                                                                  {name:'irq', value: 0},
-                                                                  {name:'guest', value: 0},
-                                                                  {name:'steal', value: 0},
-                                                                  {name:'nice', value: 0}
-                                                              ],
-                                                            memory : [{name:'pct_usage',value:0}, {name:'total',value:0}, {name:'free',value:0}, {name:'active',value:0}], 
-                                                            memory_detail : [
-                                                                  {name:'total', value: 0},
-                                                                  {name:'active', value: 0},
-                                                                  {name:'inactive', value: 0},
-                                                                  {name:'free', value: 0}
-                                                              ],
-                                                            io_reads: [{name:'rdsdev',value:0}, {name:'filesystem',value:0}],
-                                                            io_writes: [{name:'rdsdev',value:0}, {name:'filesystem',value:0}], 
-                                                            tps: [{name:'total_tps',value:0}], 
-                                                            io_queue: [{name:'avg_queue',value:0}], 
-                                                            network: [{name:'tx',value:0}, {name:'rx',value:0}],
-                                                            processlist : [],
-                                                            timestamp : 0
-                                              },
-                                              charts : {
-                                                
-                                                          cpu : [],
-                                                          memory : [],
-                                                          reads : [],
-                                                          writes : [],
-                                                          network_tx : [],
-                                                          network_rx : [],
-                                                
-                                              }
-                                              });
-        
-    
     
     
     //--######## SQL Query Feature
+    
     const [dataQuery,setdataQuery] = useState({columns: [], dataset: []});
     const txtSQLText = useRef('');
 
-     
-     
-    //--######## Functions and Events
-
-    //-- Function Gather Metrics
-    const fetchMetrics = () => {
-      
-        fetchRealTimeMetricsCounters();
-        fetchRealTimeMetricsSessions();
-        fetchEnhancedMonitoring();
-              
-    }
-
-
-
-    //-- Function Gather RealTime Metrics
-    const fetchRealTimeMetricsCounters = () => {
-      
+    
+    //--######## Function Validate Connection
+    async function validateConnection() {
         
-        //--- API Call Performance Counters
-        var api_params = {
-                      connection: cnf_connection_id,
-                      sql_statement: dataMetricQuery
-                      };
-    
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/postgres/sql/`,{
-              params: api_params
-              }).then((data)=>{
-                
-                  var timeNow = new Date();
-                  var currentCounters=data.data.rows[0];
-                  
-                  if ( initProcess.current === 0 ){
-                    //-- Initialize snapshot data
-                    metricObjectGlobal.current.newSnapshot(currentCounters, timeNow.getTime());
-                    initProcess.current = 1;
-                  }
-                  
-                  //-- Update the snapshot data
-                  metricObjectGlobal.current.newSnapshot(currentCounters, timeNow.getTime());
-                  
-                  //-- Add metrics
-                  metricObjectGlobal.current.addPropertyValue('xact_commit',metricObjectGlobal.current.getDeltaByIndex('xact_commit'));
-                  metricObjectGlobal.current.addPropertyValue('tup_returned',metricObjectGlobal.current.getDeltaByIndex('tup_returned'));
-                  metricObjectGlobal.current.addPropertyValue('tup_fetched',metricObjectGlobal.current.getDeltaByIndex('tup_fetched'));
-                  metricObjectGlobal.current.addPropertyValue('tup_inserted',metricObjectGlobal.current.getDeltaByIndex('tup_inserted'));
-                  metricObjectGlobal.current.addPropertyValue('tup_updated',metricObjectGlobal.current.getDeltaByIndex('tup_updated'));
-                  metricObjectGlobal.current.addPropertyValue('tup_deleted',metricObjectGlobal.current.getDeltaByIndex('tup_deleted'));
-                  
-                  
-                  if (currentTabId.current === "tab01"){
-                    
-                      setDataMetricRealTime({ 
-                                            Transactions : [metricObjectGlobal.current.getPropertyValues('xact_commit')],
-                                            Operations : [
-                                                          metricObjectGlobal.current.getPropertyValues('tup_returned'),
-                                                          metricObjectGlobal.current.getPropertyValues('tup_fetched'),
-                                                          metricObjectGlobal.current.getPropertyValues('tup_inserted'),
-                                                          metricObjectGlobal.current.getPropertyValues('tup_updated'),
-                                                          metricObjectGlobal.current.getPropertyValues('tup_deleted'),
-                                                          ],
-                                            refObject : metricObjectGlobal.current,
-                                            timestamp : timeNow.getTime()
-                      });
-                  
-                  }
-                  
-    
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/postgres/sql/' );
-                  console.log(err)
-              });
+        Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
+        if (parameter_object_values["newObject"]==false) {
+            setConnectionMessage([
+                          {
+                            type: "info",
+                            content: "Instance connection already created at [" + parameter_object_values["creationTime"] + "] with identifier [" +  parameter_object_values["connectionId"]  + "], this connection will be re-used to gather metrics.",
+                            dismissible: true,
+                            dismissLabel: "Dismiss message",
+                            onDismiss: () => setConnectionMessage([]),
+                            id: "message_1"
+                          }
+            ]);
+        }
               
-              
-            
-    
     }
-   
-   
-   //-- Function Gather RealTime Metrics
-    const fetchRealTimeMetricsSessions = () => {
-      
-              
-        if (pauseCollection.current==false)
-          return;
-        
-      
-        //--- API Call Gather Sessions
-        var api_params = {
-                      connection: cnf_connection_id,
-                      sql_statement: dataSessionQuery
-                      };
-    
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/postgres/sql/`,{
-              params: api_params
-              }).then((data)=>{
-                
-                  var timeNow = new Date();
-                  metricObjectGlobal.current.addPropertyValue('Sessions',data.data.rows.length);
-                  if (currentTabId.current === "tab01"){
-                    
-                      setDataMetricRealTimeSession({ 
-                                            Sessions : data.data.rows,
-                                            SessionsTotal : [metricObjectGlobal.current.getPropertyValues('Sessions')],
-                                            timestamp : timeNow.getTime()
-                                            
-                      });
-                      
-                      
-                  }
-                  
-              })
-              .catch((err) => {
-                  console.log('Timeout API Call : /api/postgres/sql/' );
-                  console.log(err)
-              });
-    
     
 
-              
+    //--######## Function Instance Gather Stats
+    async function gatherInstanceStats() {
+        
+        if (currentTabId.current == "tab01" || currentTabId.current == "tab03") {
+        
+            var api_url = configuration["apps-settings"]["api_url"];
             
-    
+            Axios.get(`${api_url}/api/rds/instance/postgresql/gather/stats/`,{
+                          params: { 
+                                    connectionId : parameter_object_values["connectionId"], 
+                                    instanceId : parameter_object_values["instanceId"], 
+                                    engineType : parameter_object_values["engineType"],
+                                    includeProcesses : ( currentTabId.current == "tab03" ? 1 : 0)
+                          }
+                      }).then((data)=>{
+                       
+                       console.log(data.data.instance);
+                       setInstanceStats(data.data.instance);
+                         
+                  })
+                  .catch((err) => {
+                      console.log('Timeout API Call : /api/rds/instance/postgresql/gather/stats/' );
+                      console.log(err);
+                      
+                  });
+        
+        }      
+        
+        
     }
-   
-   
-   //-- Function Gather EnhancedMetrics Metrics
-   const fetchEnhancedMonitoring = () => {
+
+
+     //--######## Function Close Database Connection
+    const closeDatabaseConnection = () => {
+       
+        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/rds/instance/postgresql/close/connection/`,{
+                      params: {     connectionId : parameter_object_values["connectionId"], 
+                                    instanceId : parameter_object_values["instanceId"], 
+                                    engineType : parameter_object_values["engineType"],
+                      }
+                  }).then((data)=>{
+                      closeTabWindow();
+                      sessionStorage.removeItem(parameter_code_id);
+                  })
+                  .catch((err) => {
+                      console.log('Timeout API Call : /api/rds/instance/mysql/close/connection/');
+                      console.log(err)
+                  });
+      
+    }
+
+
     
-            // Enhanced monitoring
-            Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aws/clw/region/logs/`,{
-                params: { resource_id : cnf_rds_resource_id }
-            }).then((data)=>{
-              
-                var time_now = new Date();
-                var message=JSON.parse(data.data.events[0].message);
-                                                        
-                metricObjectGlobal.current.addPropertyValue('Cpu_total',message.cpuUtilization.total);
-                metricObjectGlobal.current.addPropertyValue('Cpu_user',message.cpuUtilization.user);
-                metricObjectGlobal.current.addPropertyValue('Cpu_system',message.cpuUtilization.system);
-                metricObjectGlobal.current.addPropertyValue('Cpu_wait',message.cpuUtilization.wait);
-                metricObjectGlobal.current.addPropertyValue('Cpu_irq',message.cpuUtilization.irq);
-                metricObjectGlobal.current.addPropertyValue('Cpu_guest',message.cpuUtilization.guest);
-                metricObjectGlobal.current.addPropertyValue('Cpu_steal',message.cpuUtilization.steal);
-                metricObjectGlobal.current.addPropertyValue('Cpu_nice',message.cpuUtilization.nice);
-                metricObjectGlobal.current.addPropertyValue('Memory_total',message.memory.total * 1024);
-                metricObjectGlobal.current.addPropertyValue('Memory_active',message.memory.active * 1024);
-                metricObjectGlobal.current.addPropertyValue('Memory_inactive',message.memory.inactive * 1024);
-                metricObjectGlobal.current.addPropertyValue('Memory_free',message.memory.free * 1024);
-                metricObjectGlobal.current.addPropertyValue('IO_reads_rsdev',message.diskIO[0].readIOsPS);
-                metricObjectGlobal.current.addPropertyValue('IO_reads_filesystem',message.diskIO[1].readIOsPS);
-                metricObjectGlobal.current.addPropertyValue('IO_writes_rsdev',message.diskIO[0].writeIOsPS);
-                metricObjectGlobal.current.addPropertyValue('IO_writes_filesystem',message.diskIO[1].writeIOsPS);
-                metricObjectGlobal.current.addPropertyValue('Network_tx',message.network[0].tx);
-                metricObjectGlobal.current.addPropertyValue('Network_rx',message.network[0].rx);
-                
-                
-                if (currentTabId.current === "tab01" || currentTabId.current === "tab03" ){
-                  
-                    setdataEnhancedMonitor({
-                               counters :   {
-                                  cpu : [{name:'pct_usage', value: Math.trunc(message.cpuUtilization.total)},{name:'total_vcpu', value: message.numVCPUs}],
-                                  cpu_detail : [
-                                                {name:'user', value: message.cpuUtilization.user},
-                                                {name:'system', value: message.cpuUtilization.system},
-                                                {name:'wait', value: message.cpuUtilization.wait},
-                                                {name:'irq', value: message.cpuUtilization.irq},
-                                                {name:'guest', value: message.cpuUtilization.guest},
-                                                {name:'steal', value: message.cpuUtilization.steal},
-                                                {name:'nice', value: message.cpuUtilization.nice}
-                                  ],
-                                  memory : [{name: 'pct_usage', value : Math.trunc(( (message.memory.total-message.memory.free) / message.memory.total) * 100) } , {name:'total', value: message.memory.total*1024 }, {name : 'free', value: message.memory.free }, {name: 'active', value: message.memory.active}],
-                                  memory_detail : [
-                                                {name:'total', value: message.memory.total},
-                                                {name:'active', value: message.memory.active},
-                                                {name:'inactive', value: message.memory.inactive},
-                                                {name:'free', value: message.memory.free}
-                                  ],
-                                  io_reads : [{name:'rdsdev', value: message.diskIO[0].readIOsPS}, {name:'filesystem', value: message.diskIO[1].readIOsPS}],
-                                  io_writes : [{name:'rdsdev', value: message.diskIO[0].writeIOsPS}, {name:'filesystem', value: message.diskIO[1].writeIOsPS}],
-                                  network : [{name:'tx', value: message.network[0].tx}, {name:'rx', value: message.network[0].rx}],
-                                  tps: [{name:'total_tps',value: message.diskIO[0].tps + message.diskIO[1].tps }], 
-                                  io_queue: [{name:'avg_queue',value: message.diskIO[0].avgQueueLen + message.diskIO[1].avgQueueLen }], 
-                                  processlist : message.processList,
-                                  timestamp : message.timestamp
-                                  
-                                },
-                                charts : {
-                                              cpu : [
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_total'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_user'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_system'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_wait'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_irq'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_guest'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_steal'),
-                                                      metricObjectGlobal.current.getPropertyValues('Cpu_nice')
-                                                      ], 
-                                              memory : [
-                                                      metricObjectGlobal.current.getPropertyValues('Memory_total'),
-                                                      metricObjectGlobal.current.getPropertyValues('Memory_active'),
-                                                      metricObjectGlobal.current.getPropertyValues('Memory_inactive'),
-                                                      metricObjectGlobal.current.getPropertyValues('Memory_free'),
-                                                ],
-                                              reads : [
-                                                      metricObjectGlobal.current.getPropertyValues('IO_reads_rsdev'),
-                                                      metricObjectGlobal.current.getPropertyValues('IO_reads_filesystem'),
-                                                      ],
-                                              writes : [
-                                                      metricObjectGlobal.current.getPropertyValues('IO_writes_rsdev'),
-                                                      metricObjectGlobal.current.getPropertyValues('IO_writes_filesystem'),
-                                                      ],
-                                              network_tx : [
-                                                      metricObjectGlobal.current.getPropertyValues('Network_tx'),
-                                                      ],
-                                              network_rx : [
-                                                      metricObjectGlobal.current.getPropertyValues('Network_rx'),
-                                                      ],
-                                                timestamp : time_now.getTime()
-                                                
-                                }
-                      });
-                }
-                
-                
-                
-            })
-            .catch((err) => {
-                console.log('Timeout API Call : /api/aws/clw/region/logs/');
-                console.log(err)
-            });
-            
-            
-            
-  
-   }
-   
-   
-   //-- Function Handle Logout
+   //--######## Function Handle Logout
    const handleClickMenu = ({detail}) => {
           
             switch (detail.id) {
@@ -530,35 +358,20 @@ export default function App() {
             }
 
     };
+   
+   
+   
     
-    //-- Function Handle Logout
+   //--######## Function Handle Logout
    const handleClickDisconnect = () => {
-          
           closeDatabaseConnection();
-
     };
     
     
-    //-- Close Database Connection
-    
-    const closeDatabaseConnection = () => {
-        
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/security/rds/disconnect/`,{
-                      params: { session_id: cnf_connection_id, engine: cnf_rds_engine}
-                  }).then((data)=>{
-                      closeTabWindow();
-                      sessionStorage.removeItem(parameter_code_id);
-                  })
-                  .catch((err) => {
-                      console.log('Timeout API Call : /api/security/mysql/disconnect/');
-                      console.log(err)
-                  });
-                  
-  
-      
-    }
+   
+   
        
-    //-- Close TabWindow
+    //--######## Function Close TabWindow
     const closeTabWindow = () => {
               window.opener = null;
               window.open("", "_self");
@@ -568,23 +381,23 @@ export default function App() {
     
     
     
-    
-    
-    //-- Function Run Query
+    //--######## Function Run Query
     const handleClickRunQuery = () => {
-    
-        
-        //--- API Call Gather Sessions
+
+        //--- API Call Run Query
         var api_params = {
-                      connection: cnf_connection_id,
-                      sql_statement : txtSQLText.current.value
+                      connectionId : parameter_object_values["connectionId"], 
+                      instanceId : parameter_object_values["instanceId"], 
+                      engineType : parameter_object_values["engineType"],
+                      query : txtSQLText.current.value
           
         };
     
-        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/mysql/sql/`,{
+        Axios.get(`${configuration["apps-settings"]["api_url"]}/api/rds/instance/postgresql/execute/query/`,{
               params: api_params
               }).then((data)=>{
                 
+                 
                   if (data.data.hasOwnProperty('affectedRows') ){
                           setdataQuery({columns:[], dataset: [], result_code:0, result_info: ""});
                          
@@ -612,7 +425,6 @@ export default function App() {
                     
                   }
                   
-                
               })
               .catch((err) => {
                   console.log(err)
@@ -620,26 +432,24 @@ export default function App() {
                   
               });
               
-              
-              
-              
     };
     
     
-   
-    
-    //-- Startup Function
-    
-    // eslint-disable-next-line
+    //--######## Startup Events
     useEffect(() => {
-        fetchMetrics();
-        const id = setInterval(fetchMetrics, configuration["apps-settings"]["refresh-interval"]);
+        validateConnection();
+    }, []);
+    
+    
+    useEffect(() => {
+        const id = setInterval(gatherInstanceStats, configuration["apps-settings"]["refresh-interval-rds"]);
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-
-
-
+    
+    
+    
+  
   return (
     <>
       
@@ -658,79 +468,100 @@ export default function App() {
         onSplitPanelToggle={() => setsplitPanelShow(false)}
         splitPanelSize={250}
         splitPanel={
-        
-                          
-                                <SplitPanel  header={"Session Details (" + selectedItems[0].PID + ")"} i18nStrings={splitPanelI18nStrings} closeBehavior="hide"
-                                  onSplitPanelToggle={({ detail }) => {
-                                                  
-                                                  }
-                                                }
-                                >
+                  <SplitPanel  header={"Session Details (" + selectedItems[0].ThreadID + ")"} i18nStrings={splitPanelI18nStrings} closeBehavior="hide"
+                    onSplitPanelToggle={({ detail }) => {
                                     
-                                    <table style={{"width":"100%"}}>
-                                          <tr>  
-                                              <td style={{"width":"100%","padding-left": "1em"}}>  
-                                      
-                                                      <ColumnLayout columns="4" variant="text-grid">
-                                                           <div>
-                                                                <Box variant="awsui-key-label">PID</Box>
-                                                                {selectedItems[0]['PID']}
-                                                            </div>
-                                                            <div>
-                                                                <Box variant="awsui-key-label">Username</Box>
-                                                                {selectedItems[0]['Username']}
-                                                            </div>
-                                                            <div>
-                                                                <Box variant="awsui-key-label">Host</Box>
-                                                                {selectedItems[0]['Host']}
-                                                            </div>
-                                                            <div>
-                                                                <Box variant="awsui-key-label">Database</Box>
-                                                                {selectedItems[0]['Database']}
-                                                            </div>
-                                                          </ColumnLayout>
-                                                  
-                                                          <ColumnLayout columns="4" variant="text-grid">
-                                                           <div>
-                                                                <Box variant="awsui-key-label">ElapsedTime</Box>
-                                                                {selectedItems[0]['ElapsedTime']}
-                                                            </div>
-                                                            <div>
-                                                                <Box variant="awsui-key-label">State</Box>
-                                                                {selectedItems[0]['State']}
-                                                            </div>
-                                                            <div>
-                                                                <Box variant="awsui-key-label">WaitEvent</Box>
-                                                                {selectedItems[0]['WaitEvent']}
-                                                            </div>
-                                                            <div>
-                                                                <Box variant="awsui-key-label">AppName</Box>
-                                                                {selectedItems[0]['AppName']}
-                                                            </div>
-                                                          </ColumnLayout>
-                                                          <ColumnLayout columns="1" variant="text-grid">
-                                                           <div>
-                                                                <Box variant="awsui-key-label">SQLText</Box>
-                                                                {selectedItems[0]['SQLText']}
-                                                            </div>
-                                                          </ColumnLayout>
-                                            </td>
-                                        </tr>
-                                  </table>
-                                
-                                </SplitPanel>
+                                    }
+                                  }
+                  >
+                      <table style={{"width":"100%"}}>
+                          <tr>  
+                              <td style={{"width":"100%","padding-left": "1em"}}>  
                       
+                                      <ColumnLayout columns="4" variant="text-grid">
+                                           <div>
+                                                <Box variant="awsui-key-label">PID</Box>
+                                                {selectedItems[0]['PID']}
+                                            </div>
+                                            <div>
+                                                <Box variant="awsui-key-label">Username</Box>
+                                                {selectedItems[0]['Username']}
+                                            </div>
+                                            <div>
+                                                <Box variant="awsui-key-label">Host</Box>
+                                                {selectedItems[0]['Host']}
+                                            </div>
+                                            <div>
+                                                <Box variant="awsui-key-label">Database</Box>
+                                                {selectedItems[0]['Database']}
+                                            </div>
+                                          </ColumnLayout>
+                                  
+                                          <ColumnLayout columns="4" variant="text-grid">
+                                           <div>
+                                                <Box variant="awsui-key-label">ElapsedTime</Box>
+                                                {selectedItems[0]['ElapsedTime']}
+                                            </div>
+                                            <div>
+                                                <Box variant="awsui-key-label">State</Box>
+                                                {selectedItems[0]['State']}
+                                            </div>
+                                            <div>
+                                                <Box variant="awsui-key-label">WaitEvent</Box>
+                                                {selectedItems[0]['WaitEvent']}
+                                            </div>
+                                            <div>
+                                                <Box variant="awsui-key-label">AppName</Box>
+                                                {selectedItems[0]['AppName']}
+                                            </div>
+                                          </ColumnLayout>
+                                          <ColumnLayout columns="1" variant="text-grid">
+                                           <div>
+                                                <Box variant="awsui-key-label">SQLText</Box>
+                                                {selectedItems[0]['SQLText']}
+                                            </div>
+                                          </ColumnLayout>
+                            </td>
+                        </tr>
+                  </table>
+                  </SplitPanel>
         }
         content={
             <>
+                  <Flashbar items={connectionMessage} />
                   <table style={{"width":"100%"}}>
                       <tr>  
                           <td style={{"width":"50%","padding-left": "1em", "border-left": "10px solid " + configuration.colors.lines.separator100,}}>  
-                              <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                              <SpaceBetween direction="horizontal" size="xs">
+                                  { instanceStats['status'] != 'available' &&
+                                    <Spinner size="big" />
+                                  }
+                                  <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                              </SpaceBetween>
+                          </td>
+                          <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                              <StatusIndicator type={instanceStats['status'] === 'available' ? 'success' : 'pending'}> {instanceStats['status']} </StatusIndicator>
+                              <Box variant="awsui-key-label">Status</Box>
+                          </td>
+                          <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                              <div>{instanceStats['az']}</div>
+                              <Box variant="awsui-key-label">AZ</Box>
+                          </td>
+                          <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                              <div>{instanceStats['hostname']}</div>
+                              <Box variant="awsui-key-label">Hostname</Box>
+                          </td>
+                          <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                              <div>{instanceStats['uptime']}</div>
+                              <Box variant="awsui-key-label">Uptime</Box>
+                          </td>
+                          <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  
+                              <div>{instanceStats['lastUpdate']}</div>
+                              <Box variant="awsui-key-label">LastUpdate</Box>
                           </td>
                       </tr>
                   </table>
-                  
+                            
                   <Tabs
                     onChange={({ detail }) => {
                           setActiveTabId(detail.activeTabId);
@@ -745,12 +576,11 @@ export default function App() {
                         content: 
                           
                           <>
-                          
-                          <table style={{"width":"100%", "padding": "1em"}}>
+                          <table style={{"width":"100%", "padding": "1em", "background-color ": "black"}}>
                                 <tr>  
                                    <td>        
                                         <Container
-                                                    header={
+                                                      header={
                                                               <Header
                                                                 variant="h2"
                                                               >
@@ -763,76 +593,84 @@ export default function App() {
                                                     <tr>  
                                                       <td style={{"width":"12.5%","padding-left": "1em"}}>  
                                                           <CompMetric02
-                                                            value={dataEnhancedMonitor['counters']['cpu'][0]['value'] || 0}
+                                                            value={instanceStats['cpuUsage'] || 0}
                                                             title={"CPU Usage (%)"}
                                                             precision={0}
                                                             format={3}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
-                                                          <ProgressBar value={dataEnhancedMonitor['counters']['cpu'][0]['value']}
+                                                          <ProgressBar value={instanceStats['cpuUsage'] || 0}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={dataEnhancedMonitor['counters']['memory'][0]['value'] || 0}
+                                                            value={instanceStats['memoryUsage'] || 0}
                                                             title={"Memory Usage(%)"}
                                                             precision={0}
                                                             format={3}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
-                                                          <ProgressBar value={dataEnhancedMonitor['counters']['memory'][0]['value']}
+                                                          <ProgressBar value={instanceStats['memoryUsage'] || 0}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={dataEnhancedMonitor['counters']['tps'][0]['value'] || 0}
-                                                            title={"I/O TPS"}
+                                                            value={instanceStats['iops'] || 0}
+                                                            title={"IOPS"}
                                                             precision={0}
                                                             format={3}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={dataEnhancedMonitor['counters']['io_queue'][0]['value'] || 0}
-                                                            title={"DiskQueue"}
-                                                            precision={2}
-                                                            format={2}
-                                                            fontColorValue={configuration.colors.fonts.metric100}
-                                                          />
-                                                      </td>
-                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                          <CompMetric02
-                                                            value={ (dataEnhancedMonitor['counters']['io_reads'][0]['value'] + dataEnhancedMonitor['counters']['io_reads'][1]['value']) || 0}
+                                                            value={instanceStats['ioreads'] || 0}
                                                             title={"Reads (IOPS)"}
                                                             precision={0}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={ (dataEnhancedMonitor['counters']['io_writes'][0]['value'] + dataEnhancedMonitor['counters']['io_writes'][1]['value']) || 0}
+                                                            value={instanceStats['iowrites'] || 0}
                                                             title={"Write (IOPS)"}
                                                             precision={0}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={dataEnhancedMonitor['counters']['network'][0]['value'] || 0}
+                                                            value={instanceStats['network'] || 0}
+                                                            title={"Network"}
+                                                            precision={0}
+                                                            format={2}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
+                                                          />
+                                                      </td>
+                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                          <CompMetric02
+                                                            value={instanceStats['networkTx'] || 0}
                                                             title={"Network TX(Bytes/sec)"}
                                                             precision={0}
                                                             format={2}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={dataEnhancedMonitor['counters']['network'][1]['value'] || 0}
+                                                            value={instanceStats['networkRx'] || 0}
                                                             title={"Network RX(Bytes/sec)"}
                                                             precision={0}
                                                             format={2}
                                                             fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
                                                           />
                                                       </td>
                                                       
@@ -845,83 +683,84 @@ export default function App() {
                                                   <tr>  
                                                     <td style={{"width":"12.5%",  "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getDeltaByIndex('xact_commit') || 0}
-                                                          title={"Commit/sec"}
+                                                          value={instanceStats['xactTotal'] || 0}
+                                                          title={"Transactions/sec"}
                                                           type={1}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}> 
                                                         <CompMetric02
-                                                          value={ 
-                                                                  (dataMetricRealTime.refObject.getDeltaByIndex('tup_fetched') +
-                                                                  dataMetricRealTime.refObject.getDeltaByIndex('tup_returned') +
-                                                                  dataMetricRealTime.refObject.getDeltaByIndex('tup_updated') +
-                                                                  dataMetricRealTime.refObject.getDeltaByIndex('tup_inserted') +
-                                                                  dataMetricRealTime.refObject.getDeltaByIndex('tup_deleted') 
-                                                                  ) || 0
-                                                          }
+                                                          value={instanceStats['tuples'] || 0}
                                                           title={"Tuples/sec"}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                         
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getDeltaByIndex('tup_fetched') || 0}
+                                                          value={instanceStats['tupFetched'] || 0}
                                                           title={"Tuples Fetched/sec"}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                         
                                                         
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getDeltaByIndex('tup_returned') || 0}
+                                                          value={instanceStats['tupReturned'] || 0}
                                                           title={"Tuples Returned/sec"}
                                                           type={1}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                         
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getDeltaByIndex('tup_updated') || 0}
+                                                          value={instanceStats['tupUpdated'] || 0}
                                                           title={"Tuples Updated/sec"}
                                                           type={1}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid #e3e5e7", "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getDeltaByIndex('tup_inserted') || 0}
+                                                          value={instanceStats['tupInserted'] || 0}
                                                           title={"Tuples Inserted/sec"}
                                                           type={1}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getDeltaByIndex('tup_deleted') || 0}
+                                                          value={instanceStats['tupDeleted'] || 0}
                                                           title={"Tuples Deleted/sec"}
                                                           type={1}
                                                           precision={0}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                     </td>
                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                         <CompMetric02
-                                                          value={dataMetricRealTime.refObject.getValueByIndex('numbackends') || 0}
+                                                          value={instanceStats['numbackends'] || 0}
                                                           title={"Backends"}
-                                                          type={2}
                                                           precision={0}
+                                                          format={3}
                                                           fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"18px"}
                                                         />
                                                     </td>
                                               </tr>  
@@ -933,17 +772,25 @@ export default function App() {
                                                   <tr>  
                                                     
                                                     <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify(dataMetricRealTimeSession['SessionsTotal'])} title={"Active Sessions"} height="200px" />
+                                                        <ChartLine02 series={JSON.stringify( [
+                                                                                                instanceStats['history']['numbackends'],
+                                                                                                instanceStats['history']['numbackendsActive']
+                                                                                              ] )} title={"Sessions"} height="200px" />
                                                     </td>
                                                     <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify(dataMetricRealTime['Transactions'])}  title={"Transactions/sec"} height="200px" />
+                                                        <ChartLine02 series={JSON.stringify( [instanceStats['history']['xactTotal']] )}  title={"Transactions/sec"} height="200px" />
                                                     </td>
                                                     <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify(dataMetricRealTime['Operations'])} title={"Operations/sec"} height="200px" />
+                                                        <ChartLine02 series={JSON.stringify( [
+                                                                                                instanceStats['history']['tupFetched'],
+                                                                                                instanceStats['history']['tupInserted'],
+                                                                                                instanceStats['history']['tupDeleted'],
+                                                                                                instanceStats['history']['tupUpdated'],
+                                                                                              ] )} title={"Operations/sec"} height="200px" />
                                                     </td>
                                                   </tr>
                                               </table>
-                                              
+
                                         </Container>
                                         <br/>
                                     </td>  
@@ -957,7 +804,7 @@ export default function App() {
                                               header={
                                                 <Header
                                                   variant="h2"
-                                                  counter= {"(" + dataMetricRealTimeSession['Sessions'].length + ")"} 
+                                                  counter= {"(" + instanceStats['sessions'].length + ")"} 
                                                   actions={
                                                             <Toggle
                                                                 onChange={({ detail }) =>{
@@ -1003,7 +850,8 @@ export default function App() {
                                               stickyHeader
                                               loadingText="Loading records"
                                             />
-                          
+
+
                                     </td>  
                                 </tr>
                             </table>       
@@ -1019,6 +867,10 @@ export default function App() {
                         id: "tab02",
                         content: 
                         <>
+                        
+                        {/*--##############  MYSQL - RDS  ##############--*/}
+                        
+                        { ( parameter_object_values['rds_engine'] === "postgres"  ) &&
                         <table style={{"width":"100%", "padding": "1em"}}>
                                 <tr>  
                                    <td> 
@@ -1028,8 +880,8 @@ export default function App() {
                                                         <div style={{"text-align":"center"}}>
                                                             <CLWChart 
                                                                               title="CPU" 
-                                                                              subtitle="Usage(%)" 
-                                                                              height="180px"
+                                                                              subtitle="Usage %" 
+                                                                              height="180px" 
                                                                               color="orange" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
@@ -1043,18 +895,17 @@ export default function App() {
                                                                               format={3}
                                                                               font_color_value={configuration.colors.fonts.metric100}
                                                                             />
-                                             
+                                                          
                                                         </div>
                                                         <div style={{"text-align":"center" }}>
-                                                              <CLWChart 
+                                                              <CLWChart
                                                                               title="FreeableMemory" 
                                                                               subtitle="Total" 
-                                                                              height="180px"
+                                                                              height="180px" 
                                                                               color="purple" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
-                                                                              dimension_value={cnf_rds_id}
-                                                                              metric_name="FreeableMemory"
+                                                                              dimension_value={cnf_rds_id}metric_name="FreeableMemory"
                                                                               stat_type="Average"
                                                                               period={60} 
                                                                               interval={(60*1) * 60000}
@@ -1079,7 +930,7 @@ export default function App() {
                                                               <CLWChart 
                                                                             title="Reads" 
                                                                             subtitle="IOPS" 
-                                                                            height="180px"
+                                                                            height="180px" 
                                                                             color="orange" 
                                                                             namespace="AWS/RDS" 
                                                                             dimension_name={"DBInstanceIdentifier"}
@@ -1100,7 +951,7 @@ export default function App() {
                                                               <CLWChart 
                                                                               title="Writes" 
                                                                               subtitle="IOPS" 
-                                                                              height="180px"
+                                                                              height="180px" 
                                                                               color="purple" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
@@ -1128,7 +979,7 @@ export default function App() {
                                                               <CLWChart 
                                                                               title="ReadLatency" 
                                                                               subtitle="ms" 
-                                                                              height="180px"
+                                                                              height="180px" 
                                                                               color="orange" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
@@ -1149,7 +1000,7 @@ export default function App() {
                                                               <CLWChart 
                                                                               title="WriteLatency" 
                                                                               subtitle="ms" 
-                                                                              height="180px"
+                                                                              height="180px" 
                                                                               color="purple" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
@@ -1176,8 +1027,8 @@ export default function App() {
                                                         <div style={{"text-align":"center"}}>
                                                             <CLWChart 
                                                                               title="ReadThroughput" 
-                                                                              subtitle="Bytes/second" 
-                                                                              height="180px"
+                                                                              subtitle="Bytes/s" 
+                                                                              height="180px" 
                                                                               color="orange" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
@@ -1196,8 +1047,8 @@ export default function App() {
                                                         <div style={{"text-align":"center"}}>
                                                               <CLWChart 
                                                                               title="WriteThroughput" 
-                                                                              subtitle="Bytes/second" 
-                                                                              height="180px"
+                                                                              subtitle="Bytes/s" 
+                                                                              height="180px" 
                                                                               color="purple" 
                                                                               namespace="AWS/RDS" 
                                                                               dimension_name={"DBInstanceIdentifier"}
@@ -1214,6 +1065,159 @@ export default function App() {
                                                           
                                                         </div>
                                                       
+                                              </ColumnLayout>
+                                          </Container>
+                                          <br/>
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="NetworkReceive" 
+                                                                              subtitle="Bytes/s" 
+                                                                              height="180px" 
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="NetworkReceiveThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="NetworkTransmit" 
+                                                                              subtitle="Bytes/s" 
+                                                                              height="180px" 
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="NetworkTransmitThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                                            
+                                                        
+                                                        </div>
+                                                        
+                                              </ColumnLayout>
+                                           </Container>
+                                          <br />
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="DBLoadNonCPU" 
+                                                                              subtitle="Total" 
+                                                                              height="180px" 
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="DBLoadNonCPU"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={2}
+                                                                              format={1}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                          
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="DBLoad" 
+                                                                              subtitle="Total" 
+                                                                              height="180px" 
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="DBLoad"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={2}
+                                                                              format={1}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                          
+                                                        </div>
+                                                           
+                                                       
+                                              </ColumnLayout>
+                                          </Container>
+                                    </td>  
+                                </tr>
+                          </table>
+                          
+                          }
+                          
+                          {/*--##############  MYSQL - AURORA  ##############--*/}
+                              
+                          { ( parameter_object_values['rds_engine'] === "aurora-postgresql"  ) &&  
+                          <table style={{"width":"100%", "padding": "1em"}}>
+                                <tr>  
+                                   <td> 
+                                        <Container>
+                                            
+                                            <ColumnLayout columns={2} variant="text-grid" >
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="CPU" 
+                                                                              subtitle="Usage(%)" 
+                                                                              height="180px" 
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="CPUUtilization"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={3}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                            />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center" }}>
+                                                              <CLWChart 
+                                                                              title="FreeableMemory" 
+                                                                              subtitle="Total" 
+                                                                              height="180px" 
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="FreeableMemory"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                            />
+                                                                            
+                                                        
+                                                        </div>
+                                                        
                                               </ColumnLayout>
                                           </Container>
                                           <br/>
@@ -1262,7 +1266,336 @@ export default function App() {
                                                         </div>
                                                         
                                               </ColumnLayout>
+                                          </Container>
+                                          <br/>
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="StorageReceiveThroughput" 
+                                                                              subtitle="Bytes/Second" 
+                                                                              height="180px"
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="StorageNetworkReceiveThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="StorageTransmitThroughput" 
+                                                                              subtitle="Bytes/Second" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="StorageNetworkTransmitThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                                            
+                                                        
+                                                        </div>
+                                                        
+                                              </ColumnLayout>
                                            </Container>
+                                          <br />
+                                          
+                                          <Container>
+                                            
+                                            <ColumnLayout columns={2} variant="text-grid" >
+                                                           <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                            title="CommitThroughput" 
+                                                                            subtitle="Count/sec" 
+                                                                            height="180px"
+                                                                            color="orange" 
+                                                                            namespace="AWS/RDS" 
+                                                                            dimension_name={"DBInstanceIdentifier"}
+                                                                            dimension_value={cnf_rds_id}
+                                                                            metric_name="CommitThroughput"
+                                                                            stat_type="Average"
+                                                                            period={60} 
+                                                                            interval={(60*1) * 60000}
+                                                                            metric_per_second={0}
+                                                                            metric_precision={0}
+                                                                            format={1}
+                                                                            font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                                            
+                                                        
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="CommitLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="CommitLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={1}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                                            
+                                                        
+                                                        </div>
+                                                       
+                                              </ColumnLayout>
+                                          </Container>
+                                          <br />
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="SelectThroughput" 
+                                                                              subtitle="Count/sec" 
+                                                                              height="180px"
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="SelectThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="SelectLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="SelectLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                          
+                                                        </div>
+                                                      
+                                              </ColumnLayout>
+                                          </Container>
+                                          <br />
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="UpdateThroughput" 
+                                                                              subtitle="Count/sec" 
+                                                                              height="180px"
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="UpdateThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="UpdateLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="UpdateLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                          
+                                                        </div>
+                                                      
+                                              </ColumnLayout>
+                                          </Container>
+                                          <br />
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="InsertThroughput" 
+                                                                              subtitle="Count/sec" 
+                                                                              height="180px"
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="InsertThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="InsertLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="InsertLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                          
+                                                        </div>
+                                                      
+                                              </ColumnLayout>
+                                          </Container>
+                                          <br />
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                            <CLWChart 
+                                                                              title="DeleteThroughput" 
+                                                                              subtitle="Count/sec" 
+                                                                              height="180px"
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="DeleteThroughput"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                             
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="DeleteLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="DeleteLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={0}
+                                                                              format={2}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                          
+                                                        </div>
+                                                      
+                                              </ColumnLayout>
+                                          </Container>
+                                          <br/>
+                                          <Container>
+                                              <ColumnLayout columns={2} variant="text-grid">
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="ReadLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="orange" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="ReadLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={2}
+                                                                              format={3}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                                            
+                                                        
+                                                        </div>
+                                                        <div style={{"text-align":"center"}}>
+                                                              <CLWChart 
+                                                                              title="WriteLatency" 
+                                                                              subtitle="ms" 
+                                                                              height="180px"
+                                                                              color="purple" 
+                                                                              namespace="AWS/RDS" 
+                                                                              dimension_name={"DBInstanceIdentifier"}
+                                                                              dimension_value={cnf_rds_id}
+                                                                              metric_name="WriteLatency"
+                                                                              stat_type="Average"
+                                                                              period={60} 
+                                                                              interval={(60*1) * 60000}
+                                                                              metric_per_second={0}
+                                                                              metric_precision={2}
+                                                                              format={3}
+                                                                              font_color_value={configuration.colors.fonts.metric100}
+                                                                          />
+                                                                            
+                                                        
+                                                        </div>
+                                                       
+                                              </ColumnLayout>
+                                          </Container>
                                           <br />
                                           <Container>
                                               <ColumnLayout columns={2} variant="text-grid">
@@ -1312,8 +1645,11 @@ export default function App() {
                                           </Container>
                                     </td>  
                                 </tr>
-                          </table>  
-                                   
+                          </table>        
+                          
+                          }
+                          
+                              
                           </>
                           
                         
@@ -1326,8 +1662,7 @@ export default function App() {
                         id: "tab03",
                         content: 
                         <>
-                            
-                         
+                        
                         <table style={{"width":"100%", "padding": "1em"}}>
                             <tr>  
                                <td> 
@@ -1336,9 +1671,8 @@ export default function App() {
                                   <table style={{"width":"100%"}}>
                                       <tr>  
                                          <td style={{"width":"15%", "text-align":"center"}}>        
-                                                
                                                 <CompMetric02
-                                                  value={dataEnhancedMonitor['counters']['cpu'][0]['value'] || 0}
+                                                  value={ instanceStats['cpuUsage'] || 0 }
                                                   title={"Usage %"}
                                                   precision={0}
                                                   format={3}
@@ -1350,51 +1684,57 @@ export default function App() {
                                                 
                                                 <ColumnLayout columns={4} variant="text-grid">
                                                     <CompMetric03
-                                                      value={dataEnhancedMonitor['counters']['cpu_detail'][0]['value'] || 0}
+                                                      value={ instanceStats['cpuUser'] || 0 }
                                                       title={"User"}
                                                       precision={1}
                                                       format={1}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                      value={dataEnhancedMonitor['counters']['cpu_detail'][1]['value'] || 0}
+                                                      value={ instanceStats['cpuSys'] || 0 }
                                                       title={"System"}
                                                       precision={1}
                                                       format={1}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                      value={dataEnhancedMonitor['counters']['cpu_detail'][2]['value'] || 0}
+                                                      value={ instanceStats['cpuWait'] || 0 }
                                                       title={"Wait"}
                                                       precision={1}
                                                       format={1}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                      value={dataEnhancedMonitor['counters']['cpu_detail'][5]['value'] || 0}
+                                                      value={ instanceStats['cpuSteal'] || 0 }
                                                       title={"Steal"}
                                                       precision={1}
                                                       format={1}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                      value={dataEnhancedMonitor['counters']['cpu_detail'][6]['value'] || 0}
+                                                      value={ instanceStats['cpuNice'] || 0 }
                                                       title={"Nice"}
                                                       precision={1}
                                                       format={1}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                      value={dataEnhancedMonitor['counters']['cpu_detail'][4]['value'] || 0}
+                                                      value={ instanceStats['cpuGuest'] || 0 }
                                                       title={"Guest"}
                                                       precision={1}
                                                       format={1}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                   
                                                 </ColumnLayout>
@@ -1403,7 +1743,17 @@ export default function App() {
                                           
                                           <td style={{"width":"60%"}}>        
                                                 <ChartLine02 
-                                                    series={JSON.stringify(dataEnhancedMonitor['charts']['cpu'])} 
+                                                    series={JSON.stringify([ 
+                                                                              instanceStats['history']['cpuUsage'],
+                                                                              instanceStats['history']['cpuUser'],
+                                                                              instanceStats['history']['cpuSys'],
+                                                                              instanceStats['history']['cpuWait'],
+                                                                              instanceStats['history']['cpuGuest'],
+                                                                              instanceStats['history']['cpuSteal'],
+                                                                              instanceStats['history']['cpuNice'],
+                                                                              instanceStats['history']['cpuIrq']
+                                                                              
+                                                                          ])} 
                                                     title={"CPU Usage (%)"} height="200px" 
                                                 />
                                           </td>
@@ -1416,47 +1766,51 @@ export default function App() {
                                       <tr>  
                                          <td style={{"width":"15%", "text-align":"center"}}>        
                                                  <CompMetric02
-                                                  value={dataEnhancedMonitor['counters']['memory'][0]['value'] || 0}
-                                                  title={"Usage % "}
+                                                  value={ instanceStats['memoryUsage'] || 0 }
+                                                  title={"Usage %"}
                                                   precision={0}
                                                   format={3}
                                                   fontColorValue={configuration.colors.fonts.metric100}
                                                 />
-                                                <Box variant="h4">Memory </Box>
+                                                <Box variant="h4">Memory</Box>
                                           </td>
                                           <td style={{"width":"25%", "text-align":"center", "border-left": "2px solid red", "padding-left": "1em"}}>  
                                                 
                                                 <ColumnLayout columns={4} variant="text-grid">
                                                     <CompMetric03
-                                                      value={ (dataEnhancedMonitor['counters']['memory_detail'][0]['value']*1024) || 0}
+                                                      value={ instanceStats['memoryTotal'] || 0 }
                                                       title={"Total"}
                                                       precision={0}
                                                       format={2}
                                                       fontColorValue={configuration.colors.fonts.metric100}
+                                                      fontSizeValue={"16px"}
                                                     />
                                                   
                                                     <CompMetric03
-                                                        value={ (dataEnhancedMonitor['counters']['memory_detail'][1]['value']*1024) || 0}
+                                                        value={ instanceStats['memoryActive'] || 0 }
                                                         title={"Active"}
                                                         precision={0}
                                                         format={2}
                                                         fontColorValue={configuration.colors.fonts.metric100}
+                                                        fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                        value={ (dataEnhancedMonitor['counters']['memory_detail'][2]['value']*1024) || 0}
+                                                        value={ instanceStats['memoryInactive'] || 0 }
                                                         title={"Inactive"}
                                                         precision={0}
                                                         format={2}
                                                         fontColorValue={configuration.colors.fonts.metric100}
+                                                        fontSizeValue={"16px"}
                                                     />
                                                     
                                                     <CompMetric03
-                                                        value={ (dataEnhancedMonitor['counters']['memory_detail'][3]['value']*1024) || 0}
+                                                        value={ instanceStats['memoryFree'] || 0 }
                                                         title={"Free"}
                                                         precision={0}
                                                         format={2}
                                                         fontColorValue={configuration.colors.fonts.metric100}
+                                                        fontSizeValue={"16px"}
                                                     />
                                                   
                                                 </ColumnLayout>
@@ -1464,8 +1818,8 @@ export default function App() {
                                           </td>
                                           <td style={{"width":"60%"}}>        
                                               <ChartLine02 
-                                                    series={JSON.stringify(dataEnhancedMonitor['charts']['memory'])} 
-                                                    title={"Memory Usage (GB)"} height="200px" 
+                                                    series={JSON.stringify([instanceStats['history']['memoryUsage']])} 
+                                                    title={"Memory Usage (%)"} height="200px" 
                                                 />
                                           </td>
                                       </tr>
@@ -1478,7 +1832,7 @@ export default function App() {
                                       
                                           <td style={{"width":"15%", "text-align":"center"}}>      
                                               <CompMetric02
-                                                value={ (dataEnhancedMonitor['counters']['io_reads'][0]['value'] + dataEnhancedMonitor['counters']['io_reads'][1]['value']) || 0}
+                                                value={ instanceStats['ioreads'] || 0 }
                                                 title={"IOPS"}
                                                 precision={0}
                                                 fontColorValue={configuration.colors.fonts.metric100}
@@ -1488,7 +1842,7 @@ export default function App() {
                                          
                                           <td style={{"width":"15%", "text-align":"center", "border-left": "2px solid red"}}>  
                                               <CompMetric02
-                                                value={ (dataEnhancedMonitor['counters']['io_writes'][0]['value'] + dataEnhancedMonitor['counters']['io_writes'][1]['value']) || 0}
+                                                value={ instanceStats['iowrites'] || 0 }
                                                 title={"IOPS"}
                                                 precision={0}
                                                 fontColorValue={configuration.colors.fonts.metric100}
@@ -1498,14 +1852,14 @@ export default function App() {
                           
                                           <td style={{"width":"35%"}}>    
                                               <ChartLine02 
-                                                    series={JSON.stringify(dataEnhancedMonitor['charts']['reads'])} 
+                                                    series={JSON.stringify([ instanceStats['history']['ioreads'] ])} 
                                                     title={"I/O Reads"} height="200px" 
                                                 />
                                           </td>
                                           
                                           <td style={{"width":"35%", "padding-left": "1em"}}>        
                                               <ChartLine02 
-                                                    series={JSON.stringify(dataEnhancedMonitor['charts']['writes'])} 
+                                                    series={JSON.stringify([ instanceStats['history']['iowrites'] ])} 
                                                     title={"I/O Writes"} height="200px" 
                                                 />
                                           </td>
@@ -1520,7 +1874,7 @@ export default function App() {
                                       
                                           <td style={{"width":"15%", "text-align":"center"}}>        
                                               <CompMetric02
-                                                value={dataEnhancedMonitor['counters']['network'][0]['value'] || 0}
+                                                value={ instanceStats['networkTx'] || 0 }
                                                 title={"Bytes/sec"}
                                                 precision={0}
                                                 format={2}
@@ -1531,7 +1885,7 @@ export default function App() {
                                          
                                           <td style={{"width":"15%", "text-align":"center", "border-left": "2px solid red"}}>  
                                               <CompMetric02
-                                                value={ dataEnhancedMonitor['counters']['network'][1]['value'] || 0}
+                                                value={ instanceStats['networkRx'] || 0 }
                                                 title={"Bytes/sec"}
                                                 precision={0}
                                                 format={2}
@@ -1542,14 +1896,14 @@ export default function App() {
                           
                                           <td style={{"width":"35%"}}>        
                                               <ChartLine02 
-                                                    series={JSON.stringify(dataEnhancedMonitor['charts']['network_tx'])} 
+                                                    series={JSON.stringify([ instanceStats['history']['networkTx'] ])} 
                                                     title={"Network(TX)"} height="200px" 
                                                 />
                                           </td>
                                           
                                           <td style={{"width":"35%", "padding-left": "1em"}}>        
                                               <ChartLine02 
-                                                    series={JSON.stringify(dataEnhancedMonitor['charts']['network_rx'])} 
+                                                    series={JSON.stringify([ instanceStats['history']['networkRx'] ])} 
                                                     title={"Network(RX)"} height="200px" 
                                                 />
                                           </td>
@@ -1561,14 +1915,14 @@ export default function App() {
                                   <table style={{"width":"100%"}}>
                                       <tr>  
                                           <td style={{"width":"100%"}}>
-                                                
-                                                <CustomTable
+                                          
+                                              <CustomTable
                                                   columnsTable={columnsTableEm}
                                                   visibleContent={visibleContentEm}
-                                                  dataset={dataEnhancedMonitor['counters']['processlist']}
+                                                  dataset={instanceStats['processes']}
                                                   title={"Processes"}
-                                                />
-                                      
+                                              />
+                                              
                                           </td>
                                       </tr>
                                   </table>
@@ -1576,8 +1930,7 @@ export default function App() {
                                   
                                   </td>
                             </tr>
-                        </table>          
-                                    
+                        </table>  
                                     
                         </>
                           
@@ -1720,11 +2073,11 @@ export default function App() {
                                          
                                           <div>
                                             <Box variant="awsui-key-label">vCPUs</Box>
-                                            <div><div>{dataEnhancedMonitor['counters']['cpu'][1]['value']}</div></div>
+                                            <div><div>{instanceStats['vCpus']}</div></div>
                                           </div>
                                           <div>
                                             <Box variant="awsui-key-label">Memory</Box>
-                                            <div><div>{(dataEnhancedMonitor['counters']['memory'][1]['value']/1024/1024/1024).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} GB</div></div>
+                                            <div><div>{(instanceStats['memoryTotal']/1024/1024/1024).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})} GB</div></div>
                                           </div>
                                           <div>
                                             <Box variant="awsui-key-label">Storage Type</Box>

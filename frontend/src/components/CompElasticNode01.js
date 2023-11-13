@@ -11,7 +11,7 @@ import Link from "@awsui/components-react/link";
 import Header from "@awsui/components-react/header";
 
 
-const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port, syncClusterEvent, username, password, auth, ssl, node }) => {
+const ComponentObject = memo(({ node }) => {
 
     const [detailsVisible, setDetailsVisible] = useState(false);
     
@@ -24,7 +24,7 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
         <>
             <tr>
                 <td style={{"width":"9%", "text-align":"left", "border-top": "1pt solid " + configuration.colors.lines.separator100}} >  
-                    N{node.nodeId+1} &nbsp;
+                    N{node.nodeId} &nbsp;
                     { node.role === "master" &&
                         <Badge color="blue"> P </Badge>
                     }
@@ -438,8 +438,8 @@ const ComponentObject = memo(({ connectionId, clusterId, nodeId, instance, port,
                                 </td>
                                 <td style={{"width":"50%","padding-left": "1em"}}> 
                                         <ChartLine02 series={JSON.stringify([
-                                                                node.history.netin,
-                                                                node.history.netout,
+                                                                node.history.netIn,
+                                                                node.history.netOut,
                                                             ])} 
                                                             title={"Network Traffic (Bytes/sec)"} height="200px" 
                                          />

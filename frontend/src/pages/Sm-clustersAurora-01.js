@@ -23,8 +23,6 @@ import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 import Box from "@awsui/components-react/box";
 import ColumnLayout from "@awsui/components-react/column-layout";
-import Container from "@awsui/components-react/container";
-
 import '@aws-amplify/ui-react/styles.css';
 
 import { SplitPanel } from '@awsui/components-react';
@@ -127,11 +125,25 @@ function Login() {
     //-- Handle Click Events
     const handleClickLogin = () => {
             
+            // Engine Type
+            var engine = "";
+            switch (selectedItems[0]['engine']){
+              
+                case "aurora-postgresql":
+                      engine="postgresql";
+                      break;
+                      
+                case "aurora-mysql":
+                      engine="mysql";
+                      break;
+              
+            }
+            
             // Add CSRF Token
             Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
-
+            
             // Get Authentication
-            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/security/rds/auth/`,{
+            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/aurora/cluster/${engine}/authentication/`,{
                 params: { 
                           host: selectedItems[0]['endpoint'], 
                           port: selectedItems[0]['port'], 
@@ -141,6 +153,7 @@ function Login() {
                           instance : selectedItems[0]['instance'],
                           mode : "cluster",
                           cluster : selectedItems[0]['identifier'],
+                          engineType: selectedItems[0]['engine'],
                   
                 }
             }).then((data)=>{
@@ -200,7 +213,7 @@ function Login() {
             })
             .catch((err) => {
                 
-                console.log('Timeout API Call : /api/security/auth/');
+                console.log('Timeout API Call : /api/aurora/cluster/postgresql/authentication/');
                 console.log(err)
             });
             

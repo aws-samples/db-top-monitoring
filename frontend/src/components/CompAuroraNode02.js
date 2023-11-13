@@ -13,17 +13,13 @@ import CompMetric04 from './Metric04';
 import { configuration } from './../pages/Configs';
 import Badge from "@awsui/components-react/badge";
 import Link from "@awsui/components-react/link";
-import Box from "@awsui/components-react/box";
-import Table from "@awsui/components-react/table";
 import Header from "@awsui/components-react/header";
 
 const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
 
     const [detailsVisible, setDetailsVisible] = useState(false);
     const detailsVisibleState = useRef(false);
-    const activeSessions = useRef([]);
-    
-
+ 
     const columnsTable =  [
                   {id: 'PID',header: 'PID',cell: item => item['PID'],ariaLabel: createLabelFunction('PID'),sortingField: 'ThreadID',},
                   {id: 'Username',header: 'Username',cell: item => item['Username'],ariaLabel: createLabelFunction('Username'),sortingField: 'Username',},
@@ -38,45 +34,6 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
     
     const visibleContent = ['PID', 'Username', 'State', 'Host', 'WaitEvent', 'Database', 'ElapsedTime', 'AppName', 'SQLText' ];
     
-    //-- Function Gather Active Sessions
-    async function fetchSessions() {
-        //--- API Call Gather Sessions
-        if (detailsVisibleState.current == true) {
-            
-            
-            
-                //--- API Call Gather Sessions
-                var api_params = {
-                              connectionId: sessionId,
-                              clusterId : clusterId,
-                              instanceId : nodeStats.name,
-                              sql_statement: `
-                                                select pid as "PID",usename as "Username",state as "State",wait_event as "WaitEvent",datname as "Database",CAST(CURRENT_TIMESTAMP-query_start AS VARCHAR)  as "ElapsedTime",application_name as "AppName",client_addr as "Host",query as "SQLText" from pg_stat_activity where pid <> pg_backend_pid() and state = \'active\' order by query_start asc limit 250;
-                                             `
-                              };
-                
-                      Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aurora/postgresql/cluster/sql/`,{
-                      params: api_params
-                      }).then((data)=>{
-                        
-                          activeSessions.current = data.data.rows;
-                          
-                      })
-                      .catch((err) => {
-                          console.log('Timeout API Call : /api/aurora/postgresql/cluster/sql/' );
-                          console.log(err)
-                      });
-              
-                
-            
-        }
-        else {
-                activeSessions.current = [];
-        }
-    
-    }
-    
-   
     function onClickNode() {
 
         detailsVisibleState.current = (!(detailsVisibleState.current));
@@ -84,13 +41,6 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
 
     }
 
-
-    useEffect(() => {
-        const id = setInterval(fetchSessions, configuration["apps-settings"]["refresh-interval-aurora-pgs-sessions"]);
-        return () => clearInterval(id);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-    
 
     return (
         <>
@@ -101,6 +51,9 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                     }
                     { nodeStats.role === "R" &&
                         <Badge color="red"> R </Badge>
+                    }
+                    { ( nodeStats.role != "P" && nodeStats.role != "R" ) &&
+                        <Badge> - </Badge>
                     }
                     &nbsp;
                     <Link  fontSize="body-s" onFollow={() => onClickNode()}>{nodeStats.name}</Link>
@@ -131,19 +84,23 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                         chartColorLine={"#D69855"}
                     />
                 </td>
-                <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
-                    <CompMetric01 
-                        value={nodeStats.numbackends  || 0}
-                        title={""}
+                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
+                     <CompMetric04
+                        value={nodeStats.tuples || 0}
                         precision={0}
-                        format={3}
+                        format={1}
+                        height={"30px"}
+                        width={"100px"}
+                        history={20}
+                        type={"line"}
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
+                        chartColorLine={"#D69855"}
                     />
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
                     <CompMetric01 
-                        value={(nodeStats.tupInserted + nodeStats.tupDeleted + nodeStats.tupUpdated  + nodeStats.tupFetched )   || 0}
+                        value={nodeStats.numbackends  || 0}
                         title={""}
                         precision={0}
                         format={3}
@@ -289,16 +246,6 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                                     </td>
                                     <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
                                         <CompMetric01 
-                                            value={nodeStats.tupReturned  || 0}
-                                            title={"tupReturned/sec"}
-                                            precision={0}
-                                            format={1}
-                                            fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"16px"}
-                                        />
-                                    </td>
-                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
-                                        <CompMetric01 
                                             value={nodeStats.tupFetched || 0}
                                             title={"tupFetched/sec"}
                                             precision={0}
@@ -331,6 +278,16 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                                         <CompMetric01 
                                             value={nodeStats.tupUpdated || 0}
                                             title={"tupUpdated/sec"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"16px"}
+                                        />
+                                    </td>
+                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={nodeStats.tupReturned  || 0}
+                                            title={"tupReturned/sec"}
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
@@ -405,7 +362,6 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                                 </td>
                                 <td style={{"width":"33%", "padding-left": "1em"}}>  
                                      <ChartLine02 series={JSON.stringify([
-                                                            nodeStats.history.tupReturned,
                                                             nodeStats.history.tupFetched,
                                                             nodeStats.history.tupInserted,
                                                             nodeStats.history.tupDeleted,
@@ -431,8 +387,9 @@ const ComponentObject = memo(({  sessionId, clusterId, nodeStats }) => {
                                         <CustomTable
                                                   columnsTable={columnsTable}
                                                   visibleContent={visibleContent}
-                                                  dataset={activeSessions.current}
+                                                  dataset={nodeStats['sessions']}
                                                   title={"Active Sessions"}
+                                                  description={"Top 10 database active sessions"}
                                         />
                                      </div> 
                                 </td>  
