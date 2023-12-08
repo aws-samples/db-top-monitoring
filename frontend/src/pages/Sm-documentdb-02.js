@@ -276,8 +276,7 @@ function App() {
                                     includeSessions : ( currentTabId.current == "tab02" ? 1 : 0)
                           }
                       }).then((data)=>{
-                       
-                       console.log(data);
+                          
                        var info = data.data.cluster;
                        setClusterStats({ cluster : {...info} });
                          
@@ -293,7 +292,6 @@ function App() {
         
         if (currentTabId.current == "tab04") {
             
-            console.log(selectedMetricAnalytics.value);
             
             var api_url = configuration["apps-settings"]["api_url"];
             
@@ -306,7 +304,7 @@ function App() {
                           }
                       }).then((data)=>{
                         
-                        console.log(data);
+                        
                         var dataPolar = { series : [], labels : [], avg : 0, max : -Infinity, min : Infinity, count : 0 } ;
                         data.data.shards.forEach(function(item) {
                             

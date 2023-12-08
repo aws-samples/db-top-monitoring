@@ -374,8 +374,6 @@ function App() {
                        
                         var commandTypesTotal = [];
                         var analytics = { labels : [], series : [], data : [] };
-                        console.log(data.data.cluster);
-                       
                        
                         if (currentTabId.current == "tab01"){
                             

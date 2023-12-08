@@ -4,8 +4,6 @@ import Chart from 'react-apexcharts';
 
 const ChartBar = memo(({series,history, height, width="100%", title, colors=[], border=2, timestamp }) => {
     
-    console.log(series);
-    
     var options = {
               chart: {
                 height: height,
