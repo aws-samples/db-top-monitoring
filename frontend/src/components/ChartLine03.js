@@ -48,7 +48,8 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
               },
               stroke: {
                 curve: 'straight',
-                 width: border
+                 width: border,
+                 dashArray: [5,5,5]
               },
               title: {
                 text : title,
@@ -57,7 +58,7 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
                 style: {
                   fontSize:  '12px',
                   fontWeight:  'bold',
-                  fontFamily: 'Lato',
+                  fontFamily:  "Lato",
                 }
                 
               },
@@ -122,7 +123,6 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
                                   fontFamily: 'Lato',
                              },
                  },
-                 
               }
     };
     

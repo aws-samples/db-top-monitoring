@@ -1,7 +1,7 @@
 import {useState,useEffect,useRef} from 'react'
 import Chart from 'react-apexcharts';
 
-function Metric({ value, title, precision, format=1, history = 20, height, width = "100%",type = "bar", fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#C6C2C1", fontColorValue = "orange", chartColorLine = "#F6CE55" }) {
+function Metric({ value, title, precision, format=1, history = 20, height, width = "100%",type = "bar", fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#2ea597", fontColorValue = "orange", chartColorLine = "#F6CE55" }) {
 
     const dataChart = useRef(Array(history).fill(null));
     const [dataset,setDataset] = useState({   
@@ -137,10 +137,10 @@ function Metric({ value, title, precision, format=1, history = 20, height, width
                 <table style={{"width":"100%"}}>
                     <tr>
                         <td style={{"text-align":"center", "padding-left": "1em"}}>
-                              <div style={{"font-size": fontSizeValue, "font-weight": "500","font-family": "Orbitron",  }}>
+                              <div style={{"font-size": fontSizeValue, "font-weight": "900","font-family": "Lato",  }}>
                                   {dataset.value}
                               </div>
-                              <div style={{"font-size": fontSizeTitle,"font-weight": "450","font-family": "Verdana",  }}>
+                              <div style={{"font-size": fontSizeTitle,"font-weight": "450","font-family": "Lato", "color" : fontColorTitle   }}>
                                   {title}
                               </div>      
                         </td>

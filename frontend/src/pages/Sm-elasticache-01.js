@@ -25,6 +25,8 @@ import ChartLine02  from '../components/ChartLine02';
 import CLWChart  from '../components/ChartCLW03';
 import ChartRadialBar01 from '../components/ChartRadialBar01';
 import ChartColumn01 from '../components/ChartColumn01';
+import ChartProgressBar01 from '../components/ChartProgressBar-01';
+import ChartBar03 from '../components/ChartBar03';
 
 export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
   preferencesTitle: 'Split panel preferences',
@@ -111,6 +113,7 @@ function App() {
                                             connectedClients: 0,
                                             getLatency: 0,
                                             setLatency: 0,
+                                            globalLatency: 0,
                                             keyspaceHits: 0,
                                             keyspaceMisses: 0,
                                             cacheHitRate : 0,
@@ -126,6 +129,7 @@ function App() {
                                                 setCalls : [],
                                                 getLatency : [],
                                                 setLatency : [],
+                                                globalLatency : [],
                                                 keyspaceHits : [],
                                                 keyspaceMisses : [],
                                             },
@@ -423,6 +427,7 @@ function App() {
                             
                             
                             <Tabs
+                                    disableContentPaddings
                                     onChange={({ detail }) => {
                                           setActiveTabId(detail.activeTabId);
                                           currentTabId.current=detail.activeTabId;
@@ -440,15 +445,7 @@ function App() {
                                             <table style={{"width":"100%", "padding": "1em", "background-color ": "black"}}>
                                                 <tr>  
                                                    <td> 
-                                                        <Container
-                                                                 header={
-                                                                                <Header
-                                                                                  variant="h2"
-                                                                                >
-                                                                                  Performance Metrics
-                                                                                </Header>
-                                                                            }
-                                                        >
+                                                        <Container>
                                 
                                                                 <table style={{"width":"100%"}}>
                                                                     <tr>  
@@ -459,18 +456,30 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
-                                                                                    fontSizeValue={"30px"}
+                                                                                    fontSizeValue={"24px"}
                                                                                 />
                                                                         </td>
-                                                                         <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                                        <td style={{"width":"8%", "padding-left": "1em"}}>  
+                                                                                <CompMetric01 
+                                                                                    value={clusterStats['cluster']['globalLatency'] || 0}
+                                                                                    title={"globalLatency(us)"}
+                                                                                    precision={0}
+                                                                                    format={1}
+                                                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"24px"}
+                                                                                />
+                                                                        </td>
+                                                                        <td style={{"width":"8%", "padding-left": "1em"}}>  
+                                                                                
                                                                                 <CompMetric01 
                                                                                     value={clusterStats['cluster']['getLatency'] || 0}
                                                                                     title={"getLatency(us)"}
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"16px"}
                                                                                 />
-                                                                                <br/>        
+                                                                                <br/> 
                                                                                 <br/> 
                                                                                 <CompMetric01 
                                                                                     value={clusterStats['cluster']['setLatency']|| 0}
@@ -478,38 +487,61 @@ function App() {
                                                                                     precision={0}
                                                                                     format={1}
                                                                                     fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"16px"}
                                                                                 />
                                                                         </td>
-                                                                        <td style={{"width":"12%", "padding-left": "1em"}}>  
-                                                                                <ChartRadialBar01 series={JSON.stringify([Math.round(clusterStats['cluster']['cpu'] || 0)])} 
-                                                                                         height="180px" 
-                                                                                         title={"CPU (%)"}
+                                                                        <td style={{"width":"10%", "padding-left": "1em", "padding-right": "1em"}}>  
+                                                                                
+                                                                                <ChartProgressBar01 
+                                                                                    value={  Math.round(clusterStats['cluster']['cpu']) || 0 }
+                                                                                    valueSufix={"%"}
+                                                                                    title={"CPU"}
+                                                                                    precision={0}
+                                                                                    format={3}
+                                                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"16px"}
+                                                                                />
+                                                                                <br />
+                                                                                <br />
+                                                                                <ChartProgressBar01 
+                                                                                    value={  Math.round(clusterStats['cluster']['memory']) || 0 }
+                                                                                    valueSufix={"%"}
+                                                                                    title={"Memory"}
+                                                                                    precision={0}
+                                                                                    format={3}
+                                                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"16px"}
                                                                                 />
                                                                              
                                                                         </td>
-                                                                        <td style={{"width":"12%", "padding-left": "1em"}}>  
-                                                                                <ChartRadialBar01 series={JSON.stringify([Math.round(clusterStats['cluster']['memory'] || 0)])} 
-                                                                                         height="180px" 
-                                                                                         title={"Memory (%)"}
+                                                                        <td style={{"width":"10%", "padding-left": "1em", "padding-right": "1em"}}>  
+                                                                                <ChartProgressBar01 
+                                                                                    value={  Math.round(clusterStats['cluster']['network']) || 0 }
+                                                                                    valueSufix={"%"}
+                                                                                    title={"Network"}
+                                                                                    precision={0}
+                                                                                    format={3}
+                                                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"16px"}
+                                                                                />
+                                                                                <br />
+                                                                                <br />
+                                                                                <ChartProgressBar01 
+                                                                                    value={  Math.round(clusterStats['cluster']['cacheHitRate']) || 0 }
+                                                                                    valueSufix={"%"}
+                                                                                    title={"CacheHitRatio"}
+                                                                                    precision={0}
+                                                                                    format={3}
+                                                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                                                    fontSizeValue={"16px"}
                                                                                 />
                                                                         </td>
-                                                                        <td style={{"width":"12%", "padding-left": "1em"}}>  
-                                                                                <ChartRadialBar01 series={JSON.stringify([Math.round(clusterStats['cluster']['network'] || 0)])} 
-                                                                                         height="180px" 
-                                                                                         title={"Network (%)"}
-                                                                                />
-                                                                        </td>
-                                                                        <td style={{"width":"12%", "padding-right": "1em"}}>  
-                                                                                <ChartRadialBar01 series={JSON.stringify([ Math.round( clusterStats['cluster']['cacheHitRate'] || 0 ) ])} 
-                                                                                         height="180px" 
-                                                                                         title={"HitRatio (%)"}
-                                                                                />
-                                                                        </td>
-                                                                        <td style={{"width":"30%", "border-left": "1px solid red", "padding-left": "1em"}}>  
-                                                                             <ChartLine02 series={JSON.stringify([
+                                                                        <td style={{"width":"30%", "padding-left": "1em"}}>  
+                                                                            <ChartBar03 series={JSON.stringify([
                                                                                                     clusterStats['cluster']['history']['operations']
                                                                                                 ])} 
-                                                                                                title={"Operations/sec"} height="180px" />
+                                                                                                title={"Operations/sec"} height="200px" 
+                                                                            />
                                                                         </td>
                                                                         
                                                                     </tr>
@@ -527,7 +559,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -537,7 +569,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -547,7 +579,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -557,7 +589,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -567,7 +599,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -577,7 +609,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -587,7 +619,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -597,7 +629,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                         </td>
                                                                         
@@ -615,7 +647,7 @@ function App() {
                                                                             precision={0}
                                                                             format={1}
                                                                             fontColorValue={configuration.colors.fonts.metric100}
-                                                                            fontSizeValue={"18px"}
+                                                                            fontSizeValue={"16px"}
                                                                         />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -625,7 +657,7 @@ function App() {
                                                                             precision={0}
                                                                             format={1}
                                                                             fontColorValue={configuration.colors.fonts.metric100}
-                                                                            fontSizeValue={"18px"}
+                                                                            fontSizeValue={"16px"}
                                                                         />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -635,7 +667,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={2}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -645,7 +677,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={2}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -655,7 +687,7 @@ function App() {
                                                                             precision={0}
                                                                             format={2}
                                                                             fontColorValue={configuration.colors.fonts.metric100}
-                                                                            fontSizeValue={"18px"}
+                                                                            fontSizeValue={"16px"}
                                                                         />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -665,7 +697,7 @@ function App() {
                                                                             precision={0}
                                                                             format={2}
                                                                             fontColorValue={configuration.colors.fonts.metric100}
-                                                                            fontSizeValue={"18px"}
+                                                                            fontSizeValue={"16px"}
                                                                         />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -675,7 +707,7 @@ function App() {
                                                                                 precision={0}
                                                                                 format={1}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
-                                                                                fontSizeValue={"18px"}
+                                                                                fontSizeValue={"16px"}
                                                                             />
                                                                     </td>
                                                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -685,7 +717,7 @@ function App() {
                                                                             precision={0}
                                                                             format={3}
                                                                             fontColorValue={configuration.colors.fonts.metric100}
-                                                                            fontSizeValue={"18px"}
+                                                                            fontSizeValue={"16px"}
                                                                         />
                                                                     </td>
                                                                     
@@ -709,7 +741,8 @@ function App() {
                                                                     <td style={{"width":"33%","padding-left": "1em"}}> 
                                                                             <ChartLine02 series={JSON.stringify([
                                                                                                     clusterStats['cluster']['history']['getLatency'],
-                                                                                                    clusterStats['cluster']['history']['setLatency']
+                                                                                                    clusterStats['cluster']['history']['setLatency'],
+                                                                                                    clusterStats['cluster']['history']['globalLatency'],
                                                                                                 ])} 
                                                                                                 title={"CallsLatency(us)"} height="230px" />
                                                                     </td>

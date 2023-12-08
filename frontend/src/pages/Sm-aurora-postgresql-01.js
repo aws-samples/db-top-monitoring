@@ -444,6 +444,7 @@ function App() {
                             </table>
                             
                             <Tabs
+                                    disableContentPaddings
                                     onChange={({ detail }) => {
                                           setActiveTabId(detail.activeTabId);
                                           currentTabId.current=detail.activeTabId;
@@ -462,15 +463,7 @@ function App() {
                                                 <tr>  
                                                    <td> 
             
-                                                        <Container
-                                                                header={
-                                                                        <Header
-                                                                          variant="h2"
-                                                                        >
-                                                                          Performance Metrics
-                                                                        </Header>
-                                                                    }
-                                                        >
+                                                        <Container>
                                 
                                                                 <table style={{"width":"100%"}}>
                                                                     <tr>  

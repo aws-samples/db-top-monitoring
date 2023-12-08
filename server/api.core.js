@@ -1,5 +1,5 @@
 //-- Import Class Objects
-const {classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine } = require('./class.engine.js');
+const {classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster } = require('./class.engine.js');
 
 //-- Engine Objects
 var elasticacheObjectContainer = [];
@@ -53,10 +53,10 @@ AWS.config.update({region: configData.aws_region});
 var cloudwatch = new AWS.CloudWatch({region: configData.aws_region, apiVersion: '2010-08-01'});
 var cloudwatchlogs = new AWS.CloudWatchLogs();
 var docDB = new AWS.DocDB({region: configData.aws_region});
+var docDBElastic = new AWS.DocDBElastic({region: configData.aws_region});
 var elasticache = new AWS.ElastiCache();
 var memorydb = new AWS.MemoryDB();
-
-
+var sts = new AWS.STS();
 
 
 
@@ -333,9 +333,11 @@ async function openConnectionElasticacheRedisCluster(req, res) {
                                                 { name : "setCalls", type : 1, history : 20 },
                                                 { name : "getUsec", type : 1, history : 20 },
                                                 { name : "setUsec", type : 1, history : 20 },
+                                                { name : "totalUsec", type : 1, history : 20 },
                                                 { name : "connectedClients", type : 2, history : 20 },
                                                 { name : "getLatency", type : 4, history : 20 },
                                                 { name : "setLatency", type : 4, history : 20 },
+                                                { name : "globalLatency", type : 4, history : 20 },
                                                 { name : "keyspaceHits", type : 1, history : 20 },
                                                 { name : "keyspaceMisses", type : 1, history : 20 },
                                                 { name : "cacheHitRate", type : 4, history : 20 },
@@ -438,6 +440,186 @@ async function closeConnectionElasticacheRedisCluster(req, res) {
 
 
 //--#################################################################################################### 
+//   ---------------------------------------- ELASTICACHE - SERVERLESS
+//--#################################################################################################### 
+
+
+//--++ ELASTICACHE - SERVERLESS : Open Connection - ElastiCache Cluster
+app.post("/api/elasticache/redis/serverless/cluster/authentication/", authenticationElasticacheRedisServerlessCluster);
+async function authenticationElasticacheRedisServerlessCluster(req, res) {
+ 
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+        
+        
+    var params = req.body.params;
+    var session_id=uuid.v4();
+    var token = generateToken({ session_id: session_id});
+            
+    try {
+            
+            var objConnection = new classElasticacheServerlessCluster({ properties : { clusterId: params.cluster },
+                                                                        connection : { ...params },
+                
+            });
+            if (await objConnection.authentication()==true){
+                res.status(200).send( {"result":"auth1", "session_id": session_id, "session_token": token });
+            }
+            else {
+                res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+            }
+            
+                
+    }
+    catch(err){
+        console.log(err);
+        res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+    }
+
+}
+
+
+
+//--++ ELASTICACHE - SERVERLESS : Open Connection - ElastiCache Cluster
+app.post("/api/elasticache/redis/serverless/cluster/open/connection/", openConnectionElasticacheRedisServerlessCluster);
+async function openConnectionElasticacheRedisServerlessCluster(req, res) {
+    
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+        
+ 
+    var params = req.body.params;
+    
+    try {
+        
+            var engineType = params.engineType;        
+            var objectId = engineType + ":" + params.clusterId;
+            var newObject = false;
+            var creationTime = new Date().toISOString();
+            var connectionId = params.connectionId;
+            
+            if (!(objectId in elasticacheObjectContainer)) {
+                console.log("Creating new object : " + objectId);
+                elasticacheObjectContainer[objectId] = new classElasticacheServerlessCluster({
+                                    properties : { name : params.clusterId, clusterId: params.clusterId, uid: objectId, engineType : engineType, status : "-", ecpu : "-", storage : "-", connectionId: connectionId, creationTime : creationTime, lastUpdate : "" },
+                                    connection : { ...params },
+                                    }
+                                );
+                
+                newObject = true;
+            }
+            else {
+                console.log("Reusing object : " + objectId);
+                connectionId = elasticacheObjectContainer[objectId].objectProperties.connectionId;
+                creationTime = elasticacheObjectContainer[objectId].objectProperties.creationTime;
+                
+            }
+            res.status(200).send({ data : "Connection request completed", newObject : newObject, connectionId : connectionId, creationTime :  creationTime });
+                    
+            
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).send(error);
+    }
+
+}
+
+
+
+//--++ ELASTICACHE - SERVERLESS : Gather Information
+app.get("/api/elasticache/redis/serverless/cluster/gather/stats/", gatherStatsElasticacheServerlessCluster);
+async function gatherStatsElasticacheServerlessCluster(req, res) {
+    
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+        try
+            {
+                var params = req.query;
+                
+                var cluster = elasticacheObjectContainer[params.engineType + ":" + params.clusterId].getAllDataCluster();
+                res.status(200).send({ 
+                                        cluster : {...cluster }
+                                    });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+
+//--++ ELASTICACHE - SERVERLESS : Gather Information
+app.get("/api/elasticache/redis/serverless/cluster/gather/analytics/", gatherAnalyticsElasticacheServerlessCluster);
+async function gatherAnalyticsElasticacheServerlessCluster(req, res) {
+    
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+        try
+            {
+                var params = req.query;
+                
+                var metricInfo = await elasticacheObjectContainer[params.engineType + ":" + params.clusterId].getAnalyticsData({ metricName : params.metricName, period : params.period, interval : params.interval, factor : params.factor });
+                res.status(200).send({ 
+                                        metric : metricInfo 
+                                    });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+//--++ ELASTICACHE - SERVERLESS : Close Connection
+app.get("/api/elasticache/redis/serverless/cluster/close/connection/", closeConnectionElasticacheRedisServerlessCluster);
+async function closeConnectionElasticacheRedisServerlessCluster(req, res) {
+        
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+ 
+        try
+            {
+                var params = req.query;
+                
+                elasticacheObjectContainer[params.engineType + ":"  + params.clusterId].disconnect();
+                delete elasticacheObjectContainer[params.engineType + ":" + params.clusterId];
+                res.status(200).send( {"result":"Disconnection completed"});
+                
+                
+        }
+        catch(err){
+                console.log(err);
+                res.status(401).send( {"error": String(err)});
+        }
+}
+
+
+
+
+//--#################################################################################################### 
 //   ---------------------------------------- MEMORYDB
 //--#################################################################################################### 
 
@@ -517,9 +699,11 @@ async function openConnectionMemoryDBRedisCluster(req, res) {
                                                 { name : "setCalls", type : 1, history : 20 },
                                                 { name : "getUsec", type : 1, history : 20 },
                                                 { name : "setUsec", type : 1, history : 20 },
+                                                { name : "totalUsec", type : 1, history : 20 },
                                                 { name : "connectedClients", type : 2, history : 20 },
                                                 { name : "getLatency", type : 4, history : 20 },
                                                 { name : "setLatency", type : 4, history : 20 },
+                                                { name : "globalLatency", type : 4, history : 20 },
                                                 { name : "keyspaceHits", type : 1, history : 20 },
                                                 { name : "keyspaceMisses", type : 1, history : 20 },
                                                 { name : "cacheHitRate", type : 4, history : 20 },
@@ -622,7 +806,7 @@ async function closeConnectionMemoryDBRedisCluster(req, res) {
 
 
 //--#################################################################################################### 
-//   ---------------------------------------- DOCUMENTDB
+//   ---------------------------------------- DOCUMENTDB - STANDARD
 //--#################################################################################################### 
 
 
@@ -786,6 +970,233 @@ async function closeConnectionDocumentDBCluster(req, res) {
                 var params = req.query;
                 
                 documentDBObjectContainer[params.engineType + ":"  + params.clusterId].disconnectNodes();
+                delete documentDBObjectContainer[params.engineType + ":" + params.clusterId];
+                res.status(200).send( {"result":"Disconnection completed"});
+                
+                
+        }
+        catch(err){
+                console.log(err);
+                res.status(401).send( {"error": String(err)});
+        }
+}
+
+
+
+//--#################################################################################################### 
+//   ---------------------------------------- DOCUMENTDB - ELASTIC
+//--#################################################################################################### 
+
+
+//--++ DOCUMENTDB - ELASTIC : Open Connection - DocumentDB Cluster
+app.post("/api/documentdb/elastic/cluster/authentication/", authenticationDocumentDBElasticCluster);
+async function authenticationDocumentDBElasticCluster(req, res) {
+ 
+     // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+
+    var params = req.body.params;
+    var session_id=uuid.v4();
+    var token = generateToken({ session_id: session_id});
+            
+    try {
+            
+            var objConnection = new classDocumentDBElasticCluster( { connection : params } );
+            if (await objConnection.authentication()==true){
+                res.status(200).send( {"result":"auth1", "session_id": session_id, "session_token": token });
+            }
+            else {
+                res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+            }
+            
+                
+    }
+    catch(err){
+        console.log(err);
+        res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+    }
+
+}
+
+
+
+//--++ DOCUMENTDB - ELASTIC : Open Connection - DocumentDB Cluster
+app.post("/api/documentdb/elastic/cluster/open/connection/", openConnectionDocumentDBElasticCluster);
+async function openConnectionDocumentDBElasticCluster(req, res) {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+ 
+    var params = req.body.params;
+    
+    try {
+        
+            var engineType = params.engineType;        
+            var objectId = engineType + ":" + params.clusterId;
+            var newObject = false;
+            var creationTime = new Date().toISOString();
+            var connectionId = params.connectionId;
+            var clusterArn = params.clusterArn;
+            var clusterUid = (clusterArn.split("/"))[1];
+            
+            if (!(objectId in documentDBObjectContainer)) {
+                console.log("Creating new object : " + objectId);
+                documentDBObjectContainer[objectId] = new classDocumentDBElasticCluster({
+                                    properties : { name : params.clusterId, clusterId: params.clusterId, clusterUid : clusterUid, clusterArn : clusterArn, uid: objectId, engineType : engineType,  shardCapacity : "-", shardCount: "-", status : "-", networkRate : 0, connectionId: connectionId, creationTime : creationTime, lastUpdate : "" },
+                                    connection : { ...params }
+                                    }
+                                );
+                                
+                await documentDBObjectContainer[objectId].connect();
+                await documentDBObjectContainer[objectId].addShards();
+                newObject = true;
+            }
+            else {
+                console.log("Reusing object : " + objectId);
+                connectionId = documentDBObjectContainer[objectId].objectProperties.connectionId;
+                creationTime = documentDBObjectContainer[objectId].objectProperties.creationTime;
+                
+            }
+            res.status(200).send({ data : "Connection request completed", nodes : documentDBObjectContainer[objectId].getClusterShardIds(), newObject : newObject, connectionId : connectionId, creationTime :  creationTime });
+                    
+            
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).send(error);
+    }
+
+}
+
+
+
+//--++ DOCUMENTDB - ELASTIC : Gather Information
+app.get("/api/documentdb/elastic/cluster/gather/stats/", gatherStatsDocumentDBElasticCluster);
+async function gatherStatsDocumentDBElasticCluster(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+ 
+        try
+            {
+                var params = req.query;
+                
+                var cluster = documentDBObjectContainer[params.engineType + ":" + params.clusterId].getAllDataCluster();
+                var nodes = cluster.nodes.slice(params.beginItem,params.endItem);
+                res.status(200).send({ 
+                                        cluster : {...cluster, nodes : nodes }
+                                    });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+//--++ DOCUMENTDB - ELASTIC : Gather Information
+app.get("/api/documentdb/elastic/shard/gather/stats/", gatherStatsDocumentDBElasticShard);
+async function gatherStatsDocumentDBElasticShard(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+ 
+        try
+            {
+                var params = req.query;
+                
+                var shards = documentDBObjectContainer[params.engineType + ":" + params.clusterId].getAllDataShards();
+                res.status(200).send(shards);
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+
+//--++ DOCUMENTDB - ELASTIC : Shard Analytics
+app.get("/api/documentdb/elastic/shard/gather/analytics/", gatherDocumentDBElasticShardAnalytics);
+async function gatherDocumentDBElasticShardAnalytics(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+ 
+        try
+            {
+                var params = req.query;
+                
+                var data = await documentDBObjectContainer[params.engineType + ":" + params.clusterId].getDataShardsAnalytics({ metricName : params.metricName });
+                res.status(200).send(data);
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+
+//--++ DOCUMENTDB - ELASTIC : Shard Analytics
+app.get("/api/documentdb/elastic/shard/gather/analytics/details/", gatherDocumentDBElasticShardAnalyticsDetails);
+async function gatherDocumentDBElasticShardAnalyticsDetails(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+ 
+        try
+            {
+                var params = req.query;
+                
+                var data = await documentDBObjectContainer[params.engineType + ":" + params.clusterId].getDataShardsAnalyticsDetails({ metricName : params.metricName, shardId : params.shardId });
+                res.status(200).send(data);
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+//--++ DOCUMENTDB - ELASTIC : Close Connection
+app.get("/api/documentdb/elastic/cluster/close/connection/", closeConnectionDocumentDBElasticCluster);
+async function closeConnectionDocumentDBElasticCluster(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+ 
+        try
+            {
+                var params = req.query;
+                
+                documentDBObjectContainer[params.engineType + ":"  + params.clusterId].disconnect();
                 delete documentDBObjectContainer[params.engineType + ":" + params.clusterId];
                 res.status(200).send( {"result":"Disconnection completed"});
                 
@@ -2184,6 +2595,35 @@ app.get("/api/aws/region/elasticache/cluster/nodes/", (req,res)=>{
 
 
 
+// AWS : Elasticache Serverless
+app.get("/api/aws/region/elasticache/serverless/cluster/", (req,res)=>{
+
+    
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+
+
+    var parameter = {
+      MaxResults: 100
+    };
+    
+    elasticache.describeServerlessCaches(parameter, function(err, data) {
+      if (err) {
+            console.log(err, err.stack); // an error occurred
+            res.status(401).send({ ServerlessCaches : []});
+      }
+      else {
+            res.status(200).send({ csrfToken: req.csrfToken(), ServerlessCaches : data.ServerlessCaches })
+          }
+    });
+
+
+});
+
+
 
 
 // AWS : MemoryDB List nodes
@@ -2218,9 +2658,10 @@ app.get("/api/aws/region/memorydb/cluster/nodes/", (req,res)=>{
 
 
 
+
 // AWS : DocumentDB List clusters - by Region
-app.get("/api/aws/docdb/cluster/region/list/", (req,res)=>{
-   
+app.get("/api/aws/docdb/cluster/region/list/", listAWSDocumentDBClusters);
+async function listAWSDocumentDBClusters(req, res) {   
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
     
@@ -2229,24 +2670,36 @@ app.get("/api/aws/docdb/cluster/region/list/", (req,res)=>{
 
     var paramsQuery = req.query;
     
-    var params = {
+    var paramsStandard = {
         DBClusterIdentifier: paramsQuery.cluster,
         MaxRecords: 100
     };
 
+    var paramsElastic = {
+        maxResults: 100
+    };
+
     try {
-        docDB.describeDBClusters(params, function(err, data) {
-            if (err) 
-                console.log(err, err.stack); // an error occurred
-            res.status(200).send({ csrfToken: req.csrfToken(), data:data });
-        });
+        
+        
+        
+        var standardClusters = await docDB.describeDBClusters(paramsStandard).promise();
+        
+        var elasticClusters = await docDBElastic.listClusters(paramsElastic).promise();
+        
+        var accountInfo = await sts.getCallerIdentity({}).promise();
+        
+        res.status(200).send({ csrfToken: req.csrfToken(), standard : standardClusters, elastic : {...elasticClusters, endPoint : accountInfo.Account + "." + configData.aws_region + ".docdb-elastic.amazonaws.com" }  });
+        
+        
 
     } catch(error) {
         console.log(error)
                 
     }
 
-});
+}
+
 
 
 //--#################################################################################################### 

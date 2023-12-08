@@ -62,7 +62,8 @@ function Login() {
     //-- Variables Table
     const columnsTable = [
                   {id: 'identifier',header: 'Cluster identifier',cell: item => item.identifier,ariaLabel: createLabelFunction('Cluster identifier'),sortingField: 'identifier',},
-                  {id: 'status',header: 'Status',cell: item => ( <> <StatusIndicator type={item.status === 'available' ? 'success' : 'pending'}> {item.status} </StatusIndicator> </> ),ariaLabel: createLabelFunction('Status'),sortingField: 'status',},
+                  {id: 'role',header: 'Role',cell: item => item.role,ariaLabel: createLabelFunction('Role'),sortingField: 'role',},
+                  {id: 'status',header: 'Status',cell: item => ( <> <StatusIndicator type={item.status === 'available' || item.status === 'ACTIVE' ? 'success' : 'pending'}> {item.status} </StatusIndicator> </> ),ariaLabel: createLabelFunction('Status'),sortingField: 'status',},
                   {id: 'nodes',header: 'Nodes',cell: item => item.nodes,ariaLabel: createLabelFunction('Nodes'),sortingField: 'nodes',},
                   {id: 'engine',header: 'Engine',cell: item => item.engine,ariaLabel: createLabelFunction('Engine'),sortingField: 'engine',},
                   {id: 'version',header: 'Engine Version',cell: item => item.version,ariaLabel: createLabelFunction('Engine Version"'),sortingField: 'version',},
@@ -91,7 +92,7 @@ function Login() {
     };
     
    
-    const [preferences, setPreferences] = useState({ pageSize: 10, visibleContent: ['identifier', 'status', 'nodes', 'engine', 'version', 'az', 'multiaz', 'storageMode'] });
+    const [preferences, setPreferences] = useState({ pageSize: 10, visibleContent: ['identifier', 'role', 'status', 'nodes', 'engine', 'version', 'az', 'multiaz', 'storageMode'] });
     
     const [itemsTable,setItemsTable] = useState([]);
     const { items, actions, filteredItemsCount, collectionProps, filterProps, paginationProps } = useCollection(
@@ -128,8 +129,14 @@ function Login() {
             // Add CSRF Token
             Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
 
+            var apiUrl;
+            if (selectedItems[0]['engine']=="docdb")
+                apiUrl = "/api/documentdb/cluster/authentication/";
+            else
+                apiUrl = "/api/documentdb/elastic/cluster/authentication/";
+                
             // Get Authentication
-            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/documentdb/cluster/authentication/`,{
+            Axios.post(`${configuration["apps-settings"]["api_url"]}${apiUrl}`,{
                 params: { 
                           clusterId : selectedItems[0]['identifier'],
                           host: selectedItems[0]['endpoint'], 
@@ -143,6 +150,7 @@ function Login() {
                   
                 }
             }).then((data)=>{
+                console.log(data.data);
                 if (data.data.result === "auth1") {
                      sessionStorage.setItem(data.data.session_id, data.data.session_token );
                      var session_id = CryptoJS.AES.encrypt(JSON.stringify({
@@ -161,10 +169,13 @@ function Login() {
                                                                             }), 
                                                             data.data.session_id
                                                             ).toString();
-                                                            
-                                                            
-                    var path_name = "/sm-documentdb-01";
+                    var path_name;                           
+                    if (selectedItems[0]['engine'] == "docdb")       
+                        path_name = "/sm-documentdb-01";
+                    else
+                        path_name = "/sm-documentdb-02";
                      
+                    console.log(path_name);
                     
                     setModalConnectVisible(false);
                     settxtUser('');
@@ -227,7 +238,7 @@ function Login() {
         
             const { data } = await Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aws/docdb/cluster/region/list/`);
             sessionStorage.setItem("x-csrf-token", data.csrfToken );
-            data.data.DBClusters.forEach(function(item) {
+            data.standard.DBClusters.forEach(function(item) {
                           if ( item['Engine']==='docdb' ){
                            
                             try{
@@ -237,6 +248,7 @@ function Login() {
                                   });
                                   rdsItems.push({
                                                 identifier: item['DBClusterIdentifier'],
+                                                role: "Regional Cluster",
                                                 engine: item['Engine'] ,
                                                 version: item['EngineVersion'] ,
                                                 az: String(item['AvailabilityZones']),
@@ -259,7 +271,35 @@ function Login() {
                             
                           }
                           
-            })
+            });
+            
+            
+            data.elastic.clusters.forEach(function(item) {
+                           
+                            try{
+                                  rdsItems.push({
+                                                identifier: item['clusterName'],
+                                                role: "Elastic Cluster",
+                                                engine: "docdb-elastic",
+                                                version: "-",
+                                                az: "-",
+                                                nodes: "-",
+                                                nodeList : "-",
+                                                status: item['status'],
+                                                multiaz: "-",
+                                                storageMode: "-",
+                                                resourceId: item['clusterArn'],
+                                                username: "-",
+                                                endpoint: item['clusterName'] + "-" + data.elastic.endPoint,
+                                                endpointReader: "-",
+                                                port: "27017",
+                                  });
+                                  
+                            }
+                            catch{
+                              console.log('Timeout API error : /api/aws/docdb/cluster/region/list/');                  
+                            }
+            });
                                   
             
         }

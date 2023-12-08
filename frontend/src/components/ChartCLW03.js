@@ -3,7 +3,7 @@ import Axios from 'axios'
 import { configuration } from '../pages/Configs';
 import Chart from 'react-apexcharts';
 
-const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dimension_value,metric_name,stat_type,period,interval,metric_precision,format,current_metric_mode,font_color_value="#4595dd", pageId=1, itemsPerPage=2, groupByDimensionId = 0}) => {
+const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dimension_value,metric_name,stat_type,period,interval,metric_precision,format,current_metric_mode,font_color_value="#4595dd", font_color_title = "#2ea597", pageId=1, itemsPerPage=2, groupByDimensionId = 0}) => {
     
     const [chartData, setChartData] = useState({
                                                 dataset : [],
@@ -18,7 +18,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
               chart: {
                 height: height,
                 type: 'line',
-                foreColor: '#9e9b9a',
+                foreColor: '#2ea597',
                 zoom: {
                   enabled: false
                 },
@@ -36,6 +36,8 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
               legend: {
                     show: true,
                     showForSingleSeries: true,
+                    fontSize: '10px',
+                    fontFamily: 'Lato',
               },
               markers: {
                   size: 4,
@@ -104,7 +106,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                             style: {
                                   /*colors: ['#C6C2C1'],*/
                                   fontSize: '12px',
-                                  fontFamily: 'Helvetica, Arial, sans-serif',
+                                  fontFamily: 'Lato',
                              },
                  },
                  
@@ -191,7 +193,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                     var minGlobal = 0;
                     var stats = {};
                     var metric = "";
-              
+                
                     if ( timestampMetric.current != data.data.MetricDataResults[0].Timestamps[0] || refreshOnDemand.current == 1) {
                             
                             data.data.MetricDataResults.forEach(function(item) {
@@ -329,29 +331,29 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                     <table style={{"width":"100%"}}>
                         <tr>  
                            <td style={{"width":"20%", "text-align":"center", "padding-left": "4em"}}>  
-                                <span style={{"font-size": "26px", "font-weight": "500","font-family": "Orbitron", "color": font_color_value }}>{chartData.metric || 0}</span>
+                                <span style={{"font-size": "26px", "font-weight": "500", "font-family": "Lato", "color": font_color_value }}>{chartData.metric || 0}</span>
                                 <br/>  
-                                <span style={{"font-size": "10px", "font-weight": "500", }}>{subtitle}</span>
+                                <span style={{"font-size": "11px", "font-weight": "500", "font-family": "Lato", "color" : font_color_title }}>{subtitle}</span>
                                 <br/>  
-                                <span style={{"font-size": "14px", "font-weight": "700", }}>{title}</span>
+                                <span style={{"font-size": "14px", "font-weight": "700", "color" : font_color_title }}>{title}</span>
                                 <br/>
                                 <br/>  
                                 <table style={{"width":"100%"}}>
                                     <tr>
                                         <td>
-                                            <span style={{"font-size": "14px", "font-weight": "500","font-family": "Orbitron","color": font_color_value }}>{chartData.stats.min}</span>
+                                            <span style={{"font-size": "16px", "font-weight": "500", "font-family": "Lato", "color": font_color_value }}>{chartData.stats.min}</span>
                                             <br/>
-                                            <span style={{"font-size": "10px", "font-weight": "500", }}>Min</span>
+                                            <span style={{"font-size": "11px", "font-weight": "500", "font-family": "Lato", "color" : font_color_title }}>Min</span>
                                         </td>
                                         <td>
-                                            <span style={{"font-size": "14px", "font-weight": "500","font-family": "Orbitron","color": font_color_value }}>{chartData.stats.max}</span>
+                                            <span style={{"font-size": "16px", "font-weight": "500", "font-family": "Lato", "color": font_color_value }}>{chartData.stats.max}</span>
                                             <br/>
-                                            <span style={{"font-size": "10px", "font-weight": "500", }}>Max</span>
+                                            <span style={{"font-size": "11px", "font-weight": "500", "font-family": "Lato", "color" : font_color_title }}>Max</span>
                                         </td>
                                         <td>
-                                            <span style={{"font-size": "14px", "font-weight": "500","font-family": "Orbitron","color": font_color_value }}>{chartData.stats.avg}</span>
+                                            <span style={{"font-size": "16px", "font-weight": "500", "font-family": "Lato", "color": font_color_value }}>{chartData.stats.avg}</span>
                                             <br/>    
-                                            <span style={{"font-size": "10px", "font-weight": "500", }}>Avg</span>
+                                            <span style={{"font-size": "11px", "font-weight": "500", "font-family": "Lato", "color" : font_color_title }}>Avg</span>
                                         </td>
                                     </tr>
                                 </table>

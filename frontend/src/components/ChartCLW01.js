@@ -4,7 +4,7 @@ import { configuration } from '../pages/Configs';
 import Chart from 'react-apexcharts';
 import Box from "@cloudscape-design/components/box";
 
-const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dimension_value,metric_name,stat_type,period,interval,metric_per_second,metric_precision,format, font_color_value="orange"}) => {
+const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dimension_value,metric_name,stat_type,period,interval,metric_per_second,metric_precision,format, font_color_value="#4595dd", font_color_title = "#2ea597"}) => {
     
     const [chartData, setChartData] = useState({
                                                 dataset : [],
@@ -18,6 +18,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
               chart: {
                 height: height,
                 type: 'line',
+                foreColor: '#2ea597',
                 zoom: {
                   enabled: false
                 },
@@ -89,7 +90,7 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                             style: {
                                   colors: ['#C6C2C1'],
                                   fontSize: '12px',
-                                  fontFamily: 'Helvetica, Arial, sans-serif',
+                                  fontFamily: 'Lato',
                              },
                  },
                  
@@ -236,27 +237,29 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                     <table style={{"width":"100%"}}>
                         <tr>  
                            <td style={{"width":"30%", "text-align":"center"}}>  
-                            <span style={{"font-size": "22px", "font-weight": "500","font-family": "Orbitron", "color": font_color_value }}>{chartData.metric}</span>
+                            <span style={{"font-size": "22px", "font-weight": "500","font-family": "Lato", "color": font_color_value }}>{chartData.metric}</span>
                             <br/>  
-                            <span style={{"font-size": "10px", "font-weight": "500", }}>{subtitle}</span>
+                            <span style={{"font-size": "10px", "font-weight": "500", "color" : font_color_title }}>{subtitle}</span>
                             <br/>  
-                            <Box variant="h4">{title}</Box>
+                            <span style={{"font-size": "14px", "font-weight": "700", "color" : font_color_title}}>{title}</span>
+                            <br/>
+                            <br/>
                             <table style={{"width":"100%"}}>
                                 <tr>
                                     <td>
-                                        <span style={{"font-size": "14px", "font-weight": "500","font-family": "Orbitron","color": font_color_value }}>{chartData.stats.min}</span>
+                                        <span style={{"font-size": "14px", "font-weight": "500","font-family": "Lato","color": font_color_value }}>{chartData.stats.min}</span>
                                         <br/>
-                                        <span style={{"font-size": "10px", "font-weight": "500", }}>Min</span>
+                                        <span style={{"font-size": "10px", "font-weight": "500", "color" : font_color_title }}>Min</span>
                                     </td>
                                     <td>
-                                        <span style={{"font-size": "14px", "font-weight": "500","font-family": "Orbitron","color": font_color_value }}>{chartData.stats.max}</span>
+                                        <span style={{"font-size": "14px", "font-weight": "500","font-family": "Lato","color": font_color_value }}>{chartData.stats.max}</span>
                                         <br/>
-                                        <span style={{"font-size": "10px", "font-weight": "500", }}>Max</span>
+                                        <span style={{"font-size": "10px", "font-weight": "500", "color" : font_color_title }}>Max</span>
                                     </td>
                                     <td>
-                                        <span style={{"font-size": "14px", "font-weight": "500","font-family": "Orbitron","color": font_color_value }}>{chartData.stats.avg}</span>
+                                        <span style={{"font-size": "14px", "font-weight": "500","font-family": "Lato","color": font_color_value }}>{chartData.stats.avg}</span>
                                         <br/>    
-                                        <span style={{"font-size": "10px", "font-weight": "500", }}>Avg</span>
+                                        <span style={{"font-size": "10px", "font-weight": "500", "color" : font_color_title }}>Avg</span>
                                     </td>
                                 </tr>
                             </table>

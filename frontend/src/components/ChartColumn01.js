@@ -1,6 +1,6 @@
 import Chart from 'react-apexcharts';
 
-function ChartBar({series,height, width="100%", title }) {
+function ChartBar({ series, height, width="100%", title }) {
 
     var   data = [{
               data: series.data
@@ -45,6 +45,10 @@ function ChartBar({series,height, width="100%", title }) {
                                         return parseFloat((val / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         
                                         },    
+                            style: {
+                                  fontSize: '11px',
+                                  fontFamily: 'Lato',
+                             },
                       
                 },
               },
@@ -69,6 +73,7 @@ function ChartBar({series,height, width="100%", title }) {
                 style: {
                     fontSize: '11px',
                     fontWeight: 'bold',
+                    fontFamily: 'Lato',
                 },
                 formatter: function(val, index) {
                                         

@@ -16,7 +16,7 @@ var rds = new AWS.RDS({region: configData.aws_region});
 var documentDB = new AWS.DocDB({region: configData.aws_region});
 var cloudwatch = new AWS.CloudWatch({region: configData.aws_region, apiVersion: '2010-08-01'});
 var cloudwatchlogs = new AWS.CloudWatchLogs({region: configData.aws_region });
-
+var docdbelastic = new AWS.DocDBElastic({region: configData.aws_region });
 
 class classAWS {
 
@@ -170,6 +170,32 @@ class classAWS {
             
         }
         
+        
+        
+        //-- Get Elastic Cluster Serverless Info
+        async getElasticacheServerlessClusterStatus(clusterId){
+                
+                var clusterInfo = { status : "-", ecpu : "-", storage : "-" };
+                try {
+                    
+                    var params = {
+                      ServerlessCacheName : clusterId
+                    };
+                    
+                    var clusterData = await elasticache.describeServerlessCaches(params).promise();;
+
+                    clusterInfo.status = clusterData.ServerlessCaches[0]['Status'];
+                    clusterInfo.ecpu = clusterData.ServerlessCaches[0]['CacheUsageLimits']['ECPUPerSecond']['Maximum'];
+                    clusterInfo.storage = clusterData.ServerlessCaches[0]['CacheUsageLimits']['DataStorage']['Maximum'];
+                    
+                }
+                catch (error) {
+                    console.log(error)
+                }
+                
+                return clusterInfo;
+                
+        }
         
         //------#################
         //------################# MEMORYDB
@@ -621,6 +647,39 @@ class classAWS {
 
         }
         
+        
+        
+        //-- Get DocumentDB Elastic Cluster Info
+        async getDocumentDBElasticStatus(clusterId){
+            
+            
+                
+                var clusterInfo = { status : "-", shardCapacity : "-", shardCount : "-" };
+                try {
+                    
+                    var params = {
+                      clusterArn: clusterId
+                    };
+                    var clusterData = await docdbelastic.getCluster(params).promise();;
+
+                    clusterInfo.status = clusterData.cluster.status;
+                    clusterInfo.shardCapacity = clusterData.cluster.shardCapacity;
+                    clusterInfo.shardCount = clusterData.cluster.shardCount;
+                    
+                }
+                catch (error) {
+                    console.log(error)
+                }
+                
+                
+                return clusterInfo;
+                
+
+        }
+        
+        
+        
+        
         //------#################
         //------################# OS
         //------#################
@@ -716,7 +775,7 @@ class classAWS {
                             });
                             
                             var d_end_time = new Date();
-                            var d_start_time = new Date(d_end_time - ((3*1) * 60000) );
+                            var d_start_time = new Date(d_end_time - ((5*1) * 60000) );
                             var queryClw = {
                                 MetricDataQueries: dataQueries,
                                 "StartTime": d_start_time,
@@ -937,6 +996,168 @@ class classAWS {
                 
         }
         
+        
+        
+        
+        
+        //------#################
+        //------################# Generic Metrics
+        //------#################
+        
+        //-- getGenericMetrics
+        async getGenericMetrics(object){
+            
+            var result = {};
+            try {
+                    
+                        
+                    //-- Gather Metrics from CloudWatch
+                    
+                    var dataQueries = [];
+                    var queryId = 0;
+                    object.metrics.forEach(function(item) {
+                        
+                        dataQueries.push({
+                                Id: "m0" + String(queryId),
+                                MetricStat: {
+                                    Metric: {
+                                        Namespace: item.namespace,
+                                        MetricName: item.metric,
+                                        Dimensions: item.dimension
+                                    },
+                                    Period: "60",
+                                    Stat: "Average"
+                                },
+                                Label: item.metric
+                        });
+                        result[item.metric] = { value : 0, timestamp : "" };
+                        queryId++;
+                        
+                    });
+                    
+                    var d_end_time = new Date();
+                    var d_start_time = new Date(d_end_time - ((5*1) * 60000) );
+                    var queryClw = {
+                        MetricDataQueries: dataQueries,
+                        "StartTime": d_start_time,
+                        "EndTime": d_end_time
+                    };
+                   
+                    var data = await cloudwatch.getMetricData(queryClw).promise();
+                    
+                    data.MetricDataResults.forEach(function(item) {
+                        if (item.Values.length > 0 ) {
+                            result[item.Label].value = item.Values[0];
+                            result[item.Label].timestamp = String(item.Timestamps[0]);
+                        }
+                    });
+                     
+
+                    return result;
+            }
+            catch(err){
+                
+                console.log(err);
+                return result;
+                
+            }
+            
+            
+        }
+        
+        
+        
+        //------#################
+        //------################# Generic Metrics Full Dataset
+        //------#################
+        
+        //-- getGenericMetricsDataset
+        async getGenericMetricsDataset(object){
+            
+            try {
+                    
+                        
+                    //-- Gather Metrics from CloudWatch
+                    
+                    var dataQueries = [];
+                    var queryId = 0;
+                    object.metrics.forEach(function(item) {
+                        
+                        dataQueries.push({
+                                Id: "m0" + String(queryId),
+                                MetricStat: {
+                                    Metric: {
+                                        Namespace: item.namespace,
+                                        MetricName: item.metric,
+                                        Dimensions: item.dimension
+                                    },
+                                    Period: object.period * 60,
+                                    Stat: "Average"
+                                },
+                                Label: item.metric
+                        });
+                        queryId++;
+                        
+                    });
+                    
+                    var d_end_time = new Date();
+                    var d_start_time = new Date(d_end_time - (( object.interval  ) * 60000) );
+                    var queryClw = {
+                        MetricDataQueries: dataQueries,
+                        "StartTime": d_start_time,
+                        "EndTime": d_end_time
+                    };
+                   
+                    var data = await cloudwatch.getMetricData(queryClw).promise();
+                    
+                    return data.MetricDataResults;
+                    
+            }
+            catch(err){
+                
+                console.log(err);
+                return [];
+                
+            }
+            
+            
+        }
+        
+        
+        //------#################
+        //------################# CloudWatch Metrics Insight
+        //------#################
+        
+        //-- getGenericMetricsInsight
+        async getGenericMetricsInsight(object){
+            
+            try {
+         
+                var dataQueries = [
+                        {
+                            "Expression": object.sqlQuery,
+                            "Id": "q1",
+                            "Period": object.period
+                        }    
+                ];
+                
+                var d_end_time = new Date();
+                var d_start_time = new Date(d_end_time - (( object.interval ) * 60000) );
+                var queryClw = {
+                    MetricDataQueries: dataQueries,
+                    "StartTime": d_start_time,
+                    "EndTime": d_end_time
+                };
+                
+                var data = await cloudwatch.getMetricData(queryClw).promise();
+                return data.MetricDataResults;
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+            
+        }
         
 
         

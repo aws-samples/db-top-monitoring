@@ -137,7 +137,13 @@ function Login() {
             Axios.defaults.headers.common['x-csrf-token'] = sessionStorage.getItem("x-csrf-token");
 
             // Get Authentication
-            Axios.post(`${configuration["apps-settings"]["api_url"]}/api/elasticache/redis/cluster/authentication/`,{
+            var apiUrl = "";
+            if (selectedItems[0]['engine'] == "elasticache:redis")
+                apiUrl = "/api/elasticache/redis/cluster/authentication/";
+            else
+                apiUrl = "/api/elasticache/redis/serverless/cluster/authentication/";
+            
+            Axios.post(`${configuration["apps-settings"]["api_url"]}${apiUrl}`,{
                 params: { 
                           cluster : selectedItems[0]['identifier'],
                           host: selectedItems[0]['endpoint'], 
@@ -167,7 +173,6 @@ function Login() {
                         case "modeAcl":
                                         userId = txtUser;
                                         break;
-                          
                      }
                      var session_id = CryptoJS.AES.encrypt(JSON.stringify({
                                                                             session_id : data.data.session_id,
@@ -194,6 +199,10 @@ function Login() {
                          
                           case "elasticache:redis":
                             path_name = "/sm-elasticache-01";
+                            break;
+                            
+                          case "elasticache:redis-serverless":
+                            path_name = "/sm-elasticache-02";
                             break;
                           
                           default:
@@ -261,74 +270,115 @@ function Login() {
         try{
                    
            
-            const { data } = await Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aws/region/elasticache/cluster/nodes/`);
-            sessionStorage.setItem("x-csrf-token", data.csrfToken );
-            data.ReplicationGroups.forEach(function(item) {
-                            
-                            try{
-                                  var endPoint;
-                                  var port;
-                                  if ( item['ClusterEnabled'] == true) {
+                //-- Instance Base Cluster
+                var { data } = await Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aws/region/elasticache/cluster/nodes/`);
+                sessionStorage.setItem("x-csrf-token", data.csrfToken );
+                data.ReplicationGroups.forEach(function(item) {
+                                
+                                try{
+                                      var endPoint;
+                                      var port;
+                                      if ( item['ClusterEnabled'] == true) {
+                                          
+                                          endPoint = item['ConfigurationEndpoint']['Address'];
+                                          port = item['ConfigurationEndpoint']['Port'];
+                                        
+                                      }
+                                      else {
+                                        
+                                          endPoint = item['NodeGroups'][0]['PrimaryEndpoint']['Address'];
+                                          port = item['NodeGroups'][0]['PrimaryEndpoint']['Port'];
+                                        
+                                      }
                                       
-                                      endPoint = item['ConfigurationEndpoint']['Address'];
-                                      port = item['ConfigurationEndpoint']['Port'];
-                                    
-                                  }
-                                  else {
-                                    
-                                      endPoint = item['NodeGroups'][0]['PrimaryEndpoint']['Address'];
-                                      port = item['NodeGroups'][0]['PrimaryEndpoint']['Port'];
-                                    
-                                  }
-                                  
-                                  var authMode = "";
-                                  
-                                  if ( String(item['AuthTokenEnabled']) == "true")
-                                      authMode = "modeAuth";
-                                  
-                                  if ( String(item['AuthTokenEnabled']) == "false")
-                                  {
-                                      if ( String(item["UserGroupIds"]) != "" )
+                                      var authMode = "";
+                                      
+                                      if ( String(item['AuthTokenEnabled']) == "true")
+                                          authMode = "modeAuth";
+                                      
+                                      if ( String(item['AuthTokenEnabled']) == "false")
+                                      {
+                                          if ( String(item["UserGroupIds"]) != "" )
+                                              authMode = "modeAcl";
+                                          else
+                                              authMode = "modeNonAuth";
+                                      }
+                                          
+                                      
+                                          
+                                      
+                                      rdsItems.push({
+                                                    identifier : item['ReplicationGroupId'],
+                                                    status : item['Status'] ,
+                                                    size : item['CacheNodeType'] ,
+                                                    engine : "elasticache:redis" ,
+                                                    shards : item['NodeGroups'].length,
+                                                    nodes: item['MemberClusters'].length,
+                                                    mode: item['ClusterMode'],
+                                                    endpoint: endPoint,
+                                                    port : port,
+                                                    multiaz : item['MultiAZ'],
+                                                    ssl : ( String(item['TransitEncryptionMode']) =='required' ? 'required' : '-'),
+                                                    auth : authMode,
+                                                    authmode : authMode
+                                      });
+                                      
+                                      
+                                }
+                                catch{
+                                  console.log('Timeout API error : /api/aws/region/elasticache/cluster/nodes/');                  
+                                }
+                                
+                })
+                                      
+               
+                //-- Serverless Cluster
+                data = await Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aws/region/elasticache/serverless/cluster/`);
+                console.log(data);
+                data.data.ServerlessCaches.forEach(function(item) {
+                                try{
+                                      var authMode = "";
+                                      
+                                      if ( item.hasOwnProperty("UserGroupId") && String(item["UserGroupId"]) != "" )
                                           authMode = "modeAcl";
                                       else
                                           authMode = "modeNonAuth";
-                                  }
                                       
-                                  
+                                      rdsItems.push({
+                                                    identifier : item['ServerlessCacheName'],
+                                                    status : item['Status'] ,
+                                                    size : (parseFloat(item['CacheUsageLimits']['ECPUPerSecond']['Maximum'])).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}) +  " (ECPUs)",
+                                                    engine : "elasticache:redis-serverless" ,
+                                                    shards : "-",
+                                                    nodes: "-",
+                                                    mode: "-",
+                                                    endpoint: item['Endpoint']['Address'],
+                                                    port : item['Endpoint']['Port'],
+                                                    multiaz : "true",
+                                                    ssl : "required",
+                                                    auth : authMode,
+                                                    authmode : authMode,
+                                      });
                                       
-                                  
-                                  rdsItems.push({
-                                                identifier : item['ReplicationGroupId'],
-                                                status : item['Status'] ,
-                                                size : item['CacheNodeType'] ,
-                                                engine : "elasticache:redis" ,
-                                                shards : item['NodeGroups'].length,
-                                                nodes: item['MemberClusters'].length,
-                                                mode: item['ClusterMode'],
-                                                endpoint: endPoint,
-                                                port : port,
-                                                multiaz : item['MultiAZ'],
-                                                ssl : ( String(item['TransitEncryptionMode']) =='required' ? 'required' : '-'),
-                                                auth : authMode,
-                                                authmode : authMode
-                                  });
-                                  
-                                  
-                            }
-                            catch{
-                              console.log('Timeout API error : /api/aws/region/elasticache/cluster/nodes/');                  
-                            }
-                            
-                   
-                          
-            })
-                                  
+                                      
+                                }
+                                catch{
+                                  console.log('Timeout API error : /api/aws/region/elasticache/serverless/cluster/');                  
+                                }
+                                
+                })
+                
+                
+        }
+        catch(err){
+              console.log(err);
+              console.log('Timeout API error : /api/aws/region/elasticache/cluster/nodes/');                  
+              
+        }
             
-        }
-        catch{
-          console.log('Timeout API error : /api/aws/region/elasticache/cluster/nodes/');                  
-        }
         
+        
+        //-- Create Cluster List
         setItemsTable(rdsItems);
         if (rdsItems.length > 0 ) {
           setSelectedItems([rdsItems[0]]);

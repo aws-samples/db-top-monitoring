@@ -56,9 +56,9 @@ function ChartLine({series,history, height, width="100%", title, colors=[], bord
                 align: "center",
                 show: false,
                 style: {
-                  fontSize:  '13px',
+                  fontSize:  '12px',
                   fontWeight:  'bold',
-                  fontFamily:  undefined,
+                  fontFamily:  "Lato",
                   color : "#C6C2C1"
                 }
                 
@@ -122,7 +122,7 @@ function ChartLine({series,history, height, width="100%", title, colors=[], bord
                             style: {
                                   colors: ['#C6C2C1'],
                                   fontSize: '11px',
-                                  fontFamily: 'Helvetica, Arial, sans-serif',
+                                  fontFamily: 'Lato',
                              },
                  },
                  

@@ -87,8 +87,8 @@ function ChartArea({series,serie,history, height, width="100%", title, colors=[]
                                         },    
                             style: {
                                   colors: ['#C6C2C1'],
-                                  fontSize: '12px',
-                                  fontFamily: 'Helvetica, Arial, sans-serif',
+                                  fontSize: '11px',
+                                  fontFamily: 'Lato',
                              },
                  },
                  
