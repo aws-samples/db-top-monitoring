@@ -167,11 +167,27 @@ Resources:
                             "Resource": "arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:replicationgroup:*"
                         },
                         {
+                            "Effect": "Allow",
+                            "Action": [
+                                "elasticache:DescribeServerlessCaches"
+                            ],
+                            "Resource": "arn:aws:elasticache:${AWS::Region}:${AWS::AccountId}:serverlesscache:*"
+                        },
+                        {
                 			"Effect": "Allow",
                 			"Action": "memorydb:DescribeClusters",
                 			"Resource": "arn:aws:memorydb:${AWS::Region}:${AWS::AccountId}:cluster/*"
-                		}
-                        
+                		},
+                		{
+                            "Effect": "Allow",
+                            "Action": "docdb-elastic:GetCluster",
+                            "Resource": "arn:aws:docdb-elastic:${AWS::Region}:${AWS::AccountId}:cluster/*"
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": "docdb-elastic:ListClusters",
+                            "Resource": "*"
+                        }
                     ]
                 }
         
