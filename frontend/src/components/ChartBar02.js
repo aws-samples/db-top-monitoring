@@ -2,7 +2,7 @@ import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
 
-const ChartBar = memo(({series,history, height, width="100%", title, colors=[], border=2, timestamp }) => {
+const ChartBar = memo(({ series, p50, p90, p95, avg, max, height, width="100%", title, colors=[], border=2 }) => {
 
     var options = {
               chart: {
@@ -25,8 +25,75 @@ const ChartBar = memo(({series,history, height, width="100%", title, colors=[], 
                  }
 
               },
+              annotations: {
+                yaxis: [
+                    {
+                      y: p90,
+                      strokeDashArray: 20,
+                      borderColor: 'red',
+                      label: {
+                        text: 'p90 : ' + CustomFormatNumberData(p90,2),
+                        offsetX : 950,
+                        offsetY : 9,
+                        position : "left",
+                        borderColor: 'red',
+                        style: {
+                          fontSize: '14px',
+                          fontWeight:  'bold',
+                          fontFamily: 'Lato',
+                          color: 'white',
+                          background: 'red',
+                        },
+                      }
+                    },
+                    {
+                      y: p95,
+                      strokeDashArray: 10,
+                      borderColor: 'gray',
+                      label: {
+                        text: 'p95 : ' + CustomFormatNumberData(p95,2),
+                        offsetX : 650,
+                        offsetY : 9,
+                        position : "left",
+                        borderColor: 'gray',
+                        style: {
+                          fontSize: '14px',
+                          fontWeight:  'bold',
+                          fontFamily: 'Lato',
+                          color: 'white',
+                          background: 'gray',
+                        },
+                      }
+                    },
+                    {
+                      y: avg,
+                      strokeDashArray: 10,
+                      borderColor: 'orange',
+                      label: {
+                        text: 'avg : ' + CustomFormatNumberData(avg,2),
+                        offsetX : 300,
+                        offsetY : 9,
+                        position : "left",
+                        borderColor: 'orange',
+                        style: {
+                          fontSize: '14px',
+                          fontWeight:  'bold',
+                          fontFamily: 'Lato',
+                          color: 'white',
+                          background: 'orange',
+                        },
+                      }
+                    }
+                ],
+              },
               dataLabels: {
                 enabled: false
+              },
+              legend: {
+                    show: true,
+                    showForSingleSeries: true,
+                    fontSize: '11px',
+                    fontFamily: 'Lato',
               },
               colors : colors,
               stroke: {
@@ -40,17 +107,8 @@ const ChartBar = memo(({series,history, height, width="100%", title, colors=[], 
                   size: 9
                 }
               },
-              plotOptions: {
-                bar: {
-                  borderRadius: 2,
-                  
-                }
-              },
               tooltip: {
-                    theme: "dark",
-                    x : { 
-                            format: 'HH:mm',
-                    }
+                    theme: "dark"
               },
               title: {
                 text : title,
@@ -78,14 +136,9 @@ const ChartBar = memo(({series,history, height, width="100%", title, colors=[], 
                         }
               },
               xaxis: {
-                type: 'datetime',
                 labels: {
-                    format: 'HH:mm',
-                    style: {
-                            fontSize: '11px',
-                            fontFamily: 'Lato',
-                    },
-                }
+                          show: false,
+                 },
               },
               yaxis: {
                  tickAmount: 5,
@@ -120,6 +173,16 @@ const ChartBar = memo(({series,history, height, width="100%", title, colors=[], 
               }
     };
     
+    
+    function CustomFormatNumberData(value,decimalLength) {
+        if(value == 0) return '0';
+        if(value < 1024) return parseFloat(value).toFixed(decimalLength);
+        
+        var k = 1024,
+        sizes = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'],
+        i = Math.floor(Math.log(value) / Math.log(k));
+        return parseFloat((value / Math.pow(k, i)).toFixed(decimalLength)) + ' ' + sizes[i];
+    }
     
     return (
             <div>

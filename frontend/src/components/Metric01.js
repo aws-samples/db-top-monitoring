@@ -1,6 +1,6 @@
-import {memo} from 'react'
+import {memo} from 'react';
 
-const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#C6C2C1", fontColorValue = "orange" }) => {
+const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#2ea597", fontColorValue = "orange" }) => {
 
     var counterValue = 0;
     
@@ -16,6 +16,10 @@ const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px"
               
               case 3:
                 counterValue = CustomFormatNumberRawInteger(value,0);
+                break;
+              
+              case 4:
+                counterValue = CustomFormatNumber(value,precision);
                 break;
               
             }
@@ -53,13 +57,24 @@ const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px"
         return value.toLocaleString('en-US', {minimumFractionDigits:decimalLength, maximumFractionDigits:decimalLength}); 
     }
     
+    
+    function CustomFormatNumber(value,decimalLength) {
+        if(value == 0) return '0';
+        if(value < 1000) return parseFloat(value).toFixed(decimalLength);
+        
+        var k = 1000,
+        sizes = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'],
+        i = Math.floor(Math.log(value) / Math.log(k));
+        return parseFloat((value / Math.pow(k, i)).toFixed(decimalLength)) + ' ' + sizes[i];
+    }
+    
     return (
             <div>
-                <span style={{"font-size": fontSizeValue, "font-weight": "500","font-family": "Orbitron", "color": fontColorValue }}>
+                <span style={{"font-size": fontSizeValue, "font-weight": "900","font-family": "Lato" }}>
                     {counterValue}
                 </span>
                 <br/>
-                <span style={{"font-size": fontSizeTitle,"font-weight": "450","font-family": "Verdana", }}>
+                <span style={{"font-size": fontSizeTitle,"font-weight": "450","font-family": "Lato", "color": fontColorTitle }}>
                     {title}
                 </span>
           
@@ -68,3 +83,4 @@ const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px"
 });
 
 export default Metric
+

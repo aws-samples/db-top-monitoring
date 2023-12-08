@@ -1,6 +1,7 @@
 import { useState, memo } from 'react'
 import ChartLine02 from './ChartLine02';
-import ChartRadialBar01 from './ChartRadialBar01';
+import ChartProgressBar01 from './ChartProgressBar-01';
+import ChartBar03 from '../components/ChartBar03';
 
 import Container from "@awsui/components-react/container";
 import CompMetric01 from './Metric01';
@@ -90,8 +91,8 @@ const ComponentObject = memo(({ node }) => {
                     <CompMetric01 
                         value={node.cacheHitRate || 0}
                         title={""}
-                        precision={2}
-                        format={1}
+                        precision={0}
+                        format={3}
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
@@ -140,11 +141,11 @@ const ComponentObject = memo(({ node }) => {
                         value={node.cpu || 0}
                         title={""}
                         precision={0}
-                        format={1}
+                        format={3}
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
-                     }
+                    }
                 </td>
                 <td style={{"width":"9%", "text-align":"center", "border-top": "1pt solid " + configuration.colors.lines.separator100}}>
                     { node.role !== "-" &&
@@ -152,7 +153,7 @@ const ComponentObject = memo(({ node }) => {
                         value={node.memory || 0}
                         title={""}
                         precision={0}
-                        format={1}
+                        format={3}
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
@@ -164,7 +165,7 @@ const ComponentObject = memo(({ node }) => {
                         value={node.network || 0}
                         title={""}
                         precision={0}
-                        format={1}
+                        format={3}
                         fontSizeValue={"14px"}
                         fontColorValue={configuration.colors.fonts.metric100}
                     />
@@ -186,42 +187,72 @@ const ComponentObject = memo(({ node }) => {
                         >
                         <table style={{"width":"100%"}}>
                             <tr>
-                                <td style={{"width":"12%", "padding-left": "1em"}}>  
+                                <td style={{"width":"10%", "padding-left": "1em"}}>  
                                         <CompMetric01 
                                             value={node.operations || 0}
                                             title={"Operations/sec"}
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"24px"}
+                                            fontSizeValue={"18px"}
                                         />
                                 </td>
-                                <td style={{"width":"13%","padding-left": "0em"}}> 
-                                    <ChartRadialBar01 series={JSON.stringify([Math.round(node.cpu)])} 
-                                         height="180px" 
-                                         title={"CPU (%)"}
+                                <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                        <CompMetric01 
+                                            value={node.globalLatency || 0}
+                                            title={"globalLatency(us)"}
+                                            precision={0}
+                                            format={1}
+                                            fontColorValue={configuration.colors.fonts.metric100}
+                                            fontSizeValue={"18px"}
+                                        />
+                                </td>
+                                <td style={{"width":"11%","padding-left": "0em", "padding-right": "1em"}}> 
+                                    <ChartProgressBar01 
+                                        value={  Math.round(node.cpu) || 0 }
+                                        valueSufix={"%"}
+                                        title={"CPU"}
+                                        precision={0}
+                                        format={3}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"16px"}
+                                    />
+                                    <br />
+                                    <br />
+                                    <ChartProgressBar01 
+                                        value={  Math.round(node.memory) || 0 }
+                                        valueSufix={"%"}
+                                        title={"Memory"}
+                                        precision={0}
+                                        format={3}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
-                                <td style={{"width":"13%","padding-left": "1em"}}> 
-                                    <ChartRadialBar01 series={JSON.stringify([Math.round(node.memory)])} 
-                                         height="180px" 
-                                         title={"Memory (%)"}
+                                <td style={{"width":"11%","padding-left": "1em"}}> 
+                                    <ChartProgressBar01 
+                                        value={  Math.round(node.network) || 0 }
+                                        valueSufix={"%"}
+                                        title={"Network"}
+                                        precision={0}
+                                        format={3}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"16px"}
+                                    />
+                                    <br />
+                                    <br />
+                                    <ChartProgressBar01 
+                                        value={  Math.round(node.cacheHitRate) || 0 }
+                                        valueSufix={"%"}
+                                        title={"CacheHitRatio"}
+                                        precision={0}
+                                        format={3}
+                                        fontColorValue={configuration.colors.fonts.metric100}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
-                                <td style={{"width":"13%","padding-left": "1em"}}> 
-                                    <ChartRadialBar01 series={JSON.stringify([Math.round(node.network)])} 
-                                         height="180px" 
-                                         title={"Network (%)"}
-                                    />
-                                </td>
-                                <td style={{"width":"13%","padding-left": "1em"}}> 
-                                    <ChartRadialBar01 series={JSON.stringify([Math.round(node.cacheHitRate)])} 
-                                         height="180px" 
-                                         title={"CacheHit (%)"}
-                                    />
-                                </td>
-                                <td style={{"width":"37%","padding-left": "1em"}}> 
-                                        <ChartLine02 series={JSON.stringify([
+                                <td style={{"width":"35%","padding-left": "1em"}}> 
+                                        <ChartBar03 series={JSON.stringify([
                                                                 node.history.operations
                                                             ])} 
                                                             title={"Operations/sec"} height="180px" 
@@ -239,7 +270,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -249,7 +280,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -259,7 +290,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -269,7 +300,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -279,7 +310,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -289,7 +320,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -299,7 +330,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -309,7 +340,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                     </td>
                                     
@@ -327,7 +358,7 @@ const ComponentObject = memo(({ node }) => {
                                         precision={0}
                                         format={1}
                                         fontColorValue={configuration.colors.fonts.metric100}
-                                        fontSizeValue={"18px"}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -337,7 +368,7 @@ const ComponentObject = memo(({ node }) => {
                                         precision={0}
                                         format={1}
                                         fontColorValue={configuration.colors.fonts.metric100}
-                                        fontSizeValue={"18px"}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -347,7 +378,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={2}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -357,7 +388,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={2}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -367,7 +398,7 @@ const ComponentObject = memo(({ node }) => {
                                         precision={0}
                                         format={2}
                                         fontColorValue={configuration.colors.fonts.metric100}
-                                        fontSizeValue={"18px"}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -377,7 +408,7 @@ const ComponentObject = memo(({ node }) => {
                                         precision={0}
                                         format={2}
                                         fontColorValue={configuration.colors.fonts.metric100}
-                                        fontSizeValue={"18px"}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -387,7 +418,7 @@ const ComponentObject = memo(({ node }) => {
                                             precision={0}
                                             format={1}
                                             fontColorValue={configuration.colors.fonts.metric100}
-                                            fontSizeValue={"18px"}
+                                            fontSizeValue={"16px"}
                                         />
                                 </td>
                                 <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
@@ -397,7 +428,7 @@ const ComponentObject = memo(({ node }) => {
                                         precision={0}
                                         format={3}
                                         fontColorValue={configuration.colors.fonts.metric100}
-                                        fontSizeValue={"18px"}
+                                        fontSizeValue={"16px"}
                                     />
                                 </td>
                                 
@@ -464,6 +495,7 @@ const ComponentObject = memo(({ node }) => {
                                         <ChartLine02 series={JSON.stringify([
                                                                 node.history.getLatency,
                                                                 node.history.setLatency,
+                                                                node.history.globalLatency,
                                                             ])} 
                                                             title={"LatencyCalls(us)"} height="200px"
                                          />

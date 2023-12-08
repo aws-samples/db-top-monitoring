@@ -1,0 +1,8 @@
+@keyframes placeholderAnimation {
+  0% {
+    background-position:100% 100%; /*OR bottom right*/
+  }
+  100% {
+    background-position:0 0; /*OR top left*/
+  }
+}

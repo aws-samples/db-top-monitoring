@@ -1,7 +1,7 @@
 import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
-const ChartLine = memo(({series,history, height, width="100%", title, border=2 }) => {
+const ChartLine = memo(({series, categories,history, height, width="100%", title, border=2 }) => {
 
     var options = {
               chart: {
@@ -12,7 +12,7 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
                   enabled: false
                 },
                 animations: {
-                    enabled: false,
+                    enabled: true,
                 },
                 dynamicAnimation :
                 {
@@ -55,7 +55,7 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
                 align: "center",
                 show: false,
                 style: {
-                  fontSize:  '12px',
+                  fontSize:  '14px',
                   fontWeight:  'bold',
                   fontFamily: 'Lato',
                 }
@@ -76,22 +76,19 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
               },
               tooltip: {
                     theme: "dark",
+                    x : { 
+                            format: 'HH:mm',
+                    }
               },
               xaxis: {
+                type: 'datetime',
                 labels: {
-                          show: false,
-                 },
-                 axisBorder: {
-                    show: false
-                 },
-                 axisTicks: {
-                      show: true,
-                      borderType: 'solid',
-                      color: '#78909C',
-                      height: 4,
-                      offsetX: 0,
-                      offsetY: 0
-                 },
+                    format: 'HH:mm',
+                    style: {
+                            fontSize: '11px',
+                            fontFamily: 'Lato',
+                    },
+                }
               },
               yaxis: {
                  tickAmount: 5,

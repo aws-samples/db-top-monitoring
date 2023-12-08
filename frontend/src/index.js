@@ -26,10 +26,13 @@ import SmPostgresql01 from "./pages/Sm-postgresql-01";
 import SmMssql01 from "./pages/Sm-mssql-01";
 import SmOracle01 from "./pages/Sm-oracle-01";
 import SmElasticache01 from "./pages/Sm-elasticache-01";
+import SmElasticache02 from "./pages/Sm-elasticache-02";
 import SmMemoryDB01 from "./pages/Sm-memorydb-01";
 import SmAuroraMysql01 from "./pages/Sm-aurora-mysql-01";
 import SmAuroraPostgresql01 from "./pages/Sm-aurora-postgresql-01";
 import SmDocumentDB01 from "./pages/Sm-documentdb-01";
+import SmDocumentDB02 from "./pages/Sm-documentdb-02";
+
 
 
 
@@ -80,10 +83,12 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
                     <Route path="/sm-mssql-01" element={<ProtectedApp><ProtectedDb> <SmMssql01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-oracle-01" element={<ProtectedApp><ProtectedDb> <SmOracle01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-elasticache-01" element={<ProtectedApp><ProtectedDb> <SmElasticache01 /></ProtectedDb> </ProtectedApp>} />
+                    <Route path="/sm-elasticache-02" element={<ProtectedApp><ProtectedDb> <SmElasticache02 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-memorydb-01" element={<ProtectedApp><ProtectedDb> <SmMemoryDB01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-aurora-mysql-01" element={<ProtectedApp><ProtectedDb> <SmAuroraMysql01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-aurora-postgresql-01" element={<ProtectedApp><ProtectedDb> <SmAuroraPostgresql01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-documentdb-01" element={<ProtectedApp><ProtectedDb> <SmDocumentDB01 /></ProtectedDb> </ProtectedApp>} />
+                    <Route path="/sm-documentdb-02" element={<ProtectedApp><ProtectedDb> <SmDocumentDB02 /></ProtectedDb> </ProtectedApp>} />
                 </Routes>
               </BrowserRouter>
           </Authenticator.Provider>

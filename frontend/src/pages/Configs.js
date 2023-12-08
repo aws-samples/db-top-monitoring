@@ -22,11 +22,11 @@ export const configuration =
         "fonts" : {
             "metric102" : "#4595dd",
             "metric101" : "#e59400",
-            "metric100" : "#e59400",
+            "metric100" : "",
         },
         "lines" : {
             "separator100" : "#737c85",
-            "separator101" : "red"
+            "separator101" : "#9e9b9a"
         }
     }
 };
@@ -43,7 +43,7 @@ export const SideMainLayoutMenu = [
         { type: 'link', text: 'RDS Instances', href: '/rds/instances/' },
         { type: 'link', text: 'Aurora Clusters', href: '/clusters/aurora/'},
         { type: 'link', text: 'MemoryDB Clusters', href: '/clusters/memorydb/'},
-        { type: 'link', text: 'ElastiCache Clusters for Redis', href: '/clusters/elasticache/' },
+        { type: 'link', text: 'ElastiCache Clusters', href: '/clusters/elasticache/' },
         { type: 'link', text: 'DocumentDB Clusters', href: '/clusters/documentdb'},
       ],
     },
