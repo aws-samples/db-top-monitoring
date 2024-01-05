@@ -1,4 +1,4 @@
-import TopNavigation from '@awsui/components-react/top-navigation';
+import TopNavigation from '@cloudscape-design/components/top-navigation';
 import { Authenticator } from "@aws-amplify/ui-react";
 import { configuration } from '../pages/Configs';
 import { applyMode,  Mode } from '@cloudscape-design/global-styles';

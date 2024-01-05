@@ -1,5 +1,8 @@
 //-- Import Class Objects
-const {classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster } = require('./class.engine.js');
+const {classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster, classDynamoDB } = require('./class.engine.js');
+const {classAWS} = require('./class.aws.js');
+const AWSObject = new classAWS();
+
 
 //-- Engine Objects
 var elasticacheObjectContainer = [];
@@ -11,6 +14,7 @@ var rdsMysqlObjectContainer = [];
 var rdsPostgresqlObjectContainer = [];
 var rdsSqlserverObjectContainer = [];
 var rdsOracleObjectContainer = [];
+var dynamoDBObjectContainer = [];
 
 //-- Scheduler
 const schedule = require('node-schedule');
@@ -57,7 +61,7 @@ var docDBElastic = new AWS.DocDBElastic({region: configData.aws_region});
 var elasticache = new AWS.ElastiCache();
 var memorydb = new AWS.MemoryDB();
 var sts = new AWS.STS();
-
+var dynamodb = new AWS.DynamoDB();
 
 
 // Security Variables
@@ -132,6 +136,12 @@ function scheduleJob5s(){
     //-- Rds-Oracle
     for (let engineId of Object.keys(rdsOracleObjectContainer)) {
             rdsOracleObjectContainer[engineId].refreshData();
+    }
+    
+    
+    //-- DynamoDB
+    for (let engineId of Object.keys(dynamoDBObjectContainer)) {
+            dynamoDBObjectContainer[engineId].refreshData();
     }
     
     
@@ -2337,6 +2347,169 @@ async function closeConnectionRdsOracleInstance(req, res) {
 
 
 //--#################################################################################################### 
+//   ---------------------------------------- DYNAMODB 
+//--#################################################################################################### 
+
+//--++ DYNAMODB - Authentication
+app.post("/api/dynamodb/authentication/", authenticationDynamoDB);
+async function authenticationDynamoDB(req, res) {
+ 
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+        
+    var session_id=uuid.v4();
+    var token = generateToken({ session_id: session_id});
+            
+    try {
+            
+        res.status(200).send( {"result":"auth1", "session_id": session_id, "session_token": token });
+                
+    }
+    catch(err){
+        console.log(err);
+        res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+    }
+
+}
+
+
+
+//--++ DYNAMODB - Open Connection
+app.post("/api/dynamodb/open/connection/", openConnectionDynamoDB);
+async function openConnectionDynamoDB(req, res) {
+ 
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+       
+ 
+    var params = req.body.params;
+    
+    try {
+        
+            var engineType = params.engineType;        
+            var objectId = engineType + ":" + params.tableName;
+            var newObject = false;
+            var creationTime = new Date().toISOString();
+            var connectionId = params.connectionId;
+            
+            if (!(objectId in dynamoDBObjectContainer )) {
+                console.log("Creating new object : " + objectId);
+                dynamoDBObjectContainer[objectId] = new classDynamoDB({
+                                    properties : { name : params.tableName, tableName: params.tableName, uid: objectId, engineType : engineType, status : "-", wcu : "-", rcu : "-", connectionId: connectionId, creationTime : creationTime, lastUpdate : "" },
+                                    }
+                                );
+                await dynamoDBObjectContainer[objectId].refreshData();
+                newObject = true;
+            }
+            else {
+                console.log("Reusing object : " + objectId);
+                connectionId = dynamoDBObjectContainer[objectId].objectProperties.connectionId;
+                creationTime = dynamoDBObjectContainer[objectId].objectProperties.creationTime;
+                
+            }
+            
+            res.status(200).send({ newObject : newObject, connectionId : connectionId, creationTime :  creationTime });
+                    
+            
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).send(error);
+    }
+
+}
+
+
+
+
+//--++ DYNAMODB - Gather Information
+app.get("/api/dynamodb/gather/stats/", gatherStatsDynamoDB);
+async function gatherStatsDynamoDB(req, res) {
+    
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+        try
+            {
+                var params = req.query;
+                
+                var table = dynamoDBObjectContainer[params.engineType + ":" + params.tableName].getAllTableData();
+                res.status(200).send({ 
+                                        table : {...table }
+                                    });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+//--++ DYNAMODB - Gather Information
+app.get("/api/dynamodb/gather/index/stats/", gatherIndexStatsDynamoDB);
+async function gatherIndexStatsDynamoDB(req, res) {
+    
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+        try
+            {
+                var params = req.query;
+                
+                var index = await dynamoDBObjectContainer[params.engineType + ":" + params.tableName].getIndexData({ indexName : params.indexName });
+                res.status(200).send({ 
+                                        index : {...index }
+                                    });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+//--++ DYNAMODB - Close Connection
+app.get("/api/dynamodb/close/connection/", closeConnectionDynamoDB);
+async function closeConnectionDynamoDB(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+        try
+            {
+                var params = req.query;
+                delete dynamoDBObjectContainer[params.engineType + ":" + params.tableName];
+                res.status(200).send( {"result":"Disconnection completed"});
+                
+                
+        }
+        catch(err){
+                console.log(err);
+                res.status(401).send( {"error": String(err)});
+        }
+}
+
+
+
+//--#################################################################################################### 
 //   ---------------------------------------- AWS
 //--#################################################################################################### 
 
@@ -2700,6 +2873,67 @@ async function listAWSDocumentDBClusters(req, res) {
 
 }
 
+
+// AWS : DynamoDB list tables
+app.get("/api/aws/region/dynamodb/tables/", (req,res)=>{
+    
+    
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+
+
+    var parameter = {};
+    dynamodb.listTables(parameter, function(err, data) {
+      if (err) {
+            console.log(err, err.stack); // an error occurred
+            res.status(401).send({ tables : []});
+      }
+      else {
+            res.status(200).send({ csrfToken: req.csrfToken(), tables : data.TableNames })
+          }
+    });
+
+
+});
+
+
+
+// AWS : DynamoDB list tables with details
+app.get("/api/aws/region/dynamodb/tables/details/", getDynamoDBTableDetails);
+async function getDynamoDBTableDetails(req, res) {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+
+    try {
+        
+        var tableList = await dynamodb.listTables({}).promise();
+        var tableResult = [];
+        if (tableList.TableNames.length > 0) {
+            
+            for(let index=0; index < tableList.TableNames.length ; index ++) {
+                var tableInfo = await AWSObject.getDynamoDBTableInfo(tableList.TableNames[index]); 
+                delete tableInfo.metadata;
+                tableResult.push(tableInfo);
+            }
+                                  
+        }
+        
+        res.status(200).send({ csrfToken: req.csrfToken(), tables : tableResult })
+        
+    }
+    catch{
+        res.status(401).send({ tables : []});
+    }
+    
+
+};
 
 
 //--#################################################################################################### 

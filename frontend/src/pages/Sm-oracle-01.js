@@ -4,25 +4,25 @@ import Axios from 'axios'
 import { useSearchParams } from 'react-router-dom';
 
 //-- AWS UI Objects
-import AppLayout from "@awsui/components-react/app-layout";
+import AppLayout from "@cloudscape-design/components/app-layout";
 import { useCollection } from '@cloudscape-design/collection-hooks';
-import {CollectionPreferences,Pagination } from '@awsui/components-react';
-import TextFilter from "@awsui/components-react/text-filter";
-import Spinner from "@awsui/components-react/spinner";
-import StatusIndicator from "@awsui/components-react/status-indicator";
-import Flashbar from "@awsui/components-react/flashbar";
-import Container from "@awsui/components-react/container";
-import Tabs from "@awsui/components-react/tabs";
-import ColumnLayout from "@awsui/components-react/column-layout";
-import Badge from "@awsui/components-react/badge";
-import ProgressBar from "@awsui/components-react/progress-bar";
-import Table from "@awsui/components-react/table";
-import Header from "@awsui/components-react/header";
-import Button from "@awsui/components-react/button";
-import Box from "@awsui/components-react/box";
-import SpaceBetween from "@awsui/components-react/space-between";
-import Toggle from "@awsui/components-react/toggle";
-import { SplitPanel } from '@awsui/components-react';
+import {CollectionPreferences,Pagination } from '@cloudscape-design/components';
+import TextFilter from "@cloudscape-design/components/text-filter";
+import Spinner from "@cloudscape-design/components/spinner";
+import StatusIndicator from "@cloudscape-design/components/status-indicator";
+import Flashbar from "@cloudscape-design/components/flashbar";
+import Container from "@cloudscape-design/components/container";
+import Tabs from "@cloudscape-design/components/tabs";
+import ColumnLayout from "@cloudscape-design/components/column-layout";
+import Badge from "@cloudscape-design/components/badge";
+import ProgressBar from "@cloudscape-design/components/progress-bar";
+import Table from "@cloudscape-design/components/table";
+import Header from "@cloudscape-design/components/header";
+import Button from "@cloudscape-design/components/button";
+import Box from "@cloudscape-design/components/box";
+import SpaceBetween from "@cloudscape-design/components/space-between";
+import Toggle from "@cloudscape-design/components/toggle";
+import { SplitPanel } from '@cloudscape-design/components';
 
 //-- Custom Objects
 import CustomHeader from "../components/Header";
@@ -531,7 +531,7 @@ export default function App() {
                                   { instanceStats['status'] != 'available' &&
                                     <Spinner size="big" />
                                   }
-                                  <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                                  <Box variant="h3" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
                               </SpaceBetween>
                           </td>
                           <td style={{"width":"10%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  

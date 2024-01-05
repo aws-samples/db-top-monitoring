@@ -17,6 +17,8 @@ var documentDB = new AWS.DocDB({region: configData.aws_region});
 var cloudwatch = new AWS.CloudWatch({region: configData.aws_region, apiVersion: '2010-08-01'});
 var cloudwatchlogs = new AWS.CloudWatchLogs({region: configData.aws_region });
 var docdbelastic = new AWS.DocDBElastic({region: configData.aws_region });
+var dynamodb = new AWS.DynamoDB({region: configData.aws_region });
+
 
 class classAWS {
 
@@ -678,6 +680,102 @@ class classAWS {
         }
         
         
+        //-- Get DynamoDB Table Info
+        async getDynamoDBTableInfo(tableName){
+                
+                var tableInfo = { tableName : tableName , status : "-", size : 0 , items : 0, "class" : "-", tableId : "-", rcu : 0, wcu : 0, indexes : 0, indexList : [], pkey : "", metadata : "" };
+                try {
+                    
+                    var params = {
+                      TableName: tableName
+                    };
+                    var tableData = await dynamodb.describeTable(params).promise();
+
+                    tableInfo.status = String(tableData.Table.TableStatus).toLowerCase();
+                    tableInfo.size = tableData.Table.TableSizeBytes;
+                    tableInfo.items = tableData.Table.ItemCount;
+                    tableInfo.tableId = tableData.Table.TableId;
+                    tableInfo.metadata = tableData.Table;
+                    tableInfo.pkey = tableData.Table.KeySchema[0].AttributeName;
+                    tableInfo.indexes  = (tableData.Table.hasOwnProperty("GlobalSecondaryIndexes") == true ? tableData.Table.GlobalSecondaryIndexes.length : 0);
+                    tableInfo.class = (tableData.Table.hasOwnProperty("TableClassSummary") == true ?  String(tableData.Table.TableClassSummary.TableClass).toLowerCase() : "standart");
+                    
+                    if (tableData.Table.hasOwnProperty("BillingModeSummary")) {
+                        if (tableData.Table.BillingModeSummary.BillingMode == "PAY_PER_REQUEST") {
+                            tableInfo.rcu = -1;
+                            tableInfo.wcu = -1;
+                        }
+                    }
+                    else {
+                        tableInfo.rcu = tableData.Table.ProvisionedThroughput.ReadCapacityUnits;
+                        tableInfo.wcu = tableData.Table.ProvisionedThroughput.WriteCapacityUnits;
+                    }
+                    
+                    tableData.Table.GlobalSecondaryIndexes.forEach(function(index) {
+                                    
+                        tableInfo.indexList.push(index['IndexName']);
+                                        
+                    });
+                    
+                    
+                }
+                catch (error) {
+                    console.log(error)
+                }
+                
+                
+                return tableInfo;
+
+        }
+        
+        
+        async getDynamoDBIndexInfo(tableName, indexName){
+                
+                var indexInfo = { tableName : tableName , indexName : indexName, status : "-", size : 0 , items : 0,  rcu : 0, wcu : 0 };
+                try {
+                    
+                    var params = {
+                      TableName: tableName
+                    };
+                    var tableData = await dynamodb.describeTable(params).promise();
+
+                    if (tableData.Table.hasOwnProperty("GlobalSecondaryIndexes")) {
+                    
+                            tableData.Table.GlobalSecondaryIndexes.forEach(function(index) {
+                                    
+                                    if (index['IndexName'] == indexName){
+                                 
+                                        indexInfo.status = String(index.IndexStatus).toLowerCase();
+                                        indexInfo.size = index.IndexSizeBytes;
+                                        indexInfo.items = index.ItemCount;
+                                        
+                                        if (tableData.Table.hasOwnProperty("BillingModeSummary")) {
+                                            if (tableData.Table.BillingModeSummary.BillingMode == "PAY_PER_REQUEST") {
+                                                indexInfo.rcu = -1;
+                                                indexInfo.wcu = -1;
+                                            }
+                                        }
+                                        else {
+                                            indexInfo.rcu = index.ProvisionedThroughput.ReadCapacityUnits;
+                                            indexInfo.wcu = index.ProvisionedThroughput.WriteCapacityUnits;
+                                        }
+                            
+                                    }                                
+                            });
+                            
+                    }
+                    
+                }
+                catch (error) {
+                    console.log(error)
+                }
+                
+                
+                return indexInfo;
+
+        }
+        
+        
         
         
         //------#################
@@ -1092,9 +1190,9 @@ class classAWS {
                                         Dimensions: item.dimension
                                     },
                                     Period: object.period * 60,
-                                    Stat: "Average"
+                                    Stat: item.stat
                                 },
-                                Label: item.metric
+                                Label: item.label
                         });
                         queryId++;
                         
