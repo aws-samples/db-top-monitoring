@@ -187,7 +187,17 @@ Resources:
                             "Effect": "Allow",
                             "Action": "docdb-elastic:ListClusters",
                             "Resource": "*"
-                        }
+                        },
+                        {
+                			"Effect": "Allow",
+                			"Action": "dynamodb:DescribeTable",
+                			"Resource": "arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/*"
+                		},
+                		{
+                			"Effect": "Allow",
+                			"Action": "dynamodb:ListTables",
+                			"Resource": "*"
+                		}
                     ]
                 }
         
