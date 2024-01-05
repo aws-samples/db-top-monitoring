@@ -31,9 +31,9 @@ const ChartLine = memo(({series, categories,history, height, width="100%", title
 
               },
               markers: {
-                  size: 4,
+                  size: 5,
                   radius: 0,
-                  strokeWidth: 0.1,
+                  strokeWidth: 2,
                   fillOpacity: 1,
                   shape: "circle",
               },
@@ -45,6 +45,9 @@ const ChartLine = memo(({series, categories,history, height, width="100%", title
                     showForSingleSeries: true,
                     fontSize: '11px',
                     fontFamily: 'Lato',
+              },
+              theme: {
+                palette : "palette2"
               },
               stroke: {
                 curve: 'straight',

@@ -3591,7 +3591,9 @@ class classElasticacheServerlessCluster {
                         this.#metricList.push({
                             namespace : "AWS/ElastiCache",
                             metric : metric,
-                            dimension : this.#dimension
+                            label : metric,
+                            dimension : this.#dimension,
+                            stat : "Average"
                         });
                         this.#metrics[metric] = { timestamps : [], values : [] };
                         
@@ -3863,11 +3865,13 @@ class classElasticacheServerlessCluster {
                                                                                                 {
                                                                                                     namespace : "AWS/ElastiCache",
                                                                                                     metric : object.metricName,
-                                                                                                    dimension : [{ Name: "clusterId", Value: this.objectProperties.clusterId }]
+                                                                                                    dimension : [{ Name: "clusterId", Value: this.objectProperties.clusterId }],
+                                                                                                    stat : "Average",
+                                                                                                    label : object.metricName,
                                                                                                 }
                                                                                             ], 
                                                                                     interval : object.interval, 
-                                                                                    period : object.period 
+                                                                                    period : object.period
                 });
                 
                 
@@ -3897,5 +3901,279 @@ class classElasticacheServerlessCluster {
 }
 
 
-module.exports = { classMetrics, classCluster, classNode, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classDocumentDBElasticShard, classElasticacheServerlessCluster };
+
+
+//--#############
+//--############# CLASS : classDynamoDB
+//--#############
+
+
+class classDynamoDB {
+
+        //-- Looging
+        #objLog = new classLogging({ name : "classDynamoDB", instance : "generic" });
+        
+        //-- Shard Metrics
+        #metricCatalog = {};
+        #dimension;
+        #metrics = {};
+        #metricList = [];
+        
+        
+        //-- Object Properties
+        objectProperties;
+        
+        //-- Constructor method
+        constructor(object) { 
+                this.objectProperties = object.properties;
+                this.#objLog.properties = {...this.#objLog.properties, tableName : this.objectProperties.tableName }
+                
+                //-- Create AWS Metric Catalog
+                this.#dimension = [ 
+                                    { Name: "TableName", Value: this.objectProperties.tableName }, 
+                ];
+                
+                this.#metricCatalog = {
+                        'ConsumedReadCapacityUnits' : { metric : 'ConsumedReadCapacityUnits', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }]  },
+                        'ConsumedWriteCapacityUnits' : { metric : 'ConsumedWriteCapacityUnits', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }]  },
+                        'ReadThrottleEvents' : { metric : 'ReadThrottleEvents', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }]  },
+                        'WriteThrottleEvents' : { metric : 'WriteThrottleEvents', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }]  },
+                        'ProvisionedWriteCapacityUnits' : { metric : 'ProvisionedWriteCapacityUnits', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }]  },
+                        'ProvisionedReadCapacityUnits' : { metric : 'ProvisionedReadCapacityUnits', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }]  },
+                        'SuccessfulRequestLatencyGetItem' : { metric : 'SuccessfulRequestLatency', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "GetItem" }]  },
+                        'SuccessfulRequestLatencyBatchGetItem' : { metric : 'SuccessfulRequestLatency', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "BatchGetItem" }]  },
+                        'SuccessfulRequestLatencyPutItem' : { metric : 'SuccessfulRequestLatency', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "PutItem" }]  },
+                        'SuccessfulRequestLatencyBatchWriteItem' : { metric : 'SuccessfulRequestLatency', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "BatchWriteItem" }]  },
+                        'SuccessfulRequestLatencyQuery' : { metric : 'SuccessfulRequestLatency', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "Query" }]  },
+                        'SuccessfulRequestLatencyScan' : { metric : 'SuccessfulRequestLatency', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "Scan" }]  },
+                        'ThrottledRequestsGetItem' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "GetItem" }]  },
+                        'ThrottledRequestsScan' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "Scan" }]  },
+                        'ThrottledRequestsQuery' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "Query" }]  },
+                        'ThrottledRequestsBatchGetItem' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "BatchGetItem" }]  },
+                        'ThrottledRequestsPutItem' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "PutItem" }]  },
+                        'ThrottledRequestsUpdateItem' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "UpdateItem" }]  },
+                        'ThrottledRequestsDeleteItem' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "DeleteItem" }]  },
+                        'ThrottledRequestsBatchWriteItem' : { metric : 'ThrottledRequests', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "Operation", Value: "BatchWriteItem" }]  },
+                };
+                
+                
+                for (let metric of Object.keys(this.#metricCatalog)) {
+                        this.#metricList.push({
+                            namespace : "AWS/DynamoDB",
+                            label : metric,
+                            metric : this.#metricCatalog[metric].metric,
+                            dimension : this.#metricCatalog[metric].dimension,
+                            stat : this.#metricCatalog[metric].stat
+                        });
+                        this.#metrics[metric] = { timestamps : [], values : [] };
+                        
+                };
+                
+                
+                            
+        }
+          
+        
+        
+        //-- Refresh metrics
+        async refreshData() {
+            
+            const tableInfo = await AWSObject.getDynamoDBTableInfo(this.objectProperties.tableName);
+            this.objectProperties = {...this.objectProperties, ...tableInfo };
+            this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+            
+            //-- Update Cluster Metrics - AWS CloudWatch
+            const tableMetrics = await AWSObject.getGenericMetricsDataset({ metrics : this.#metricList, interval : 60, period : (1 / 60) });
+            var history = [];
+            var value = 0;
+            var delay = 0;
+            tableMetrics.forEach(item => {
+                    try {
+                                
+                            if ( item.Timestamps.length > 0 ) {
+                                
+                                item.Timestamps.shift();
+                                item.Values.shift();
+                                
+                                delay = this.#dateDiff(item.Timestamps[0]);
+                                if ( delay <= 5 ) {
+                                    if ( this.#metricCatalog[item.Label].factor == 1)
+                                        value = item.Values[0];
+                                    else
+                                        value = item.Values[0] / this.#metricCatalog[item.Label].factor;
+                                }
+                                else    
+                                    if (item.Label == "ProvisionedWriteCapacityUnits" || item.Label == "ProvisionedReadCapacityUnits")
+                                        value = item.Values[0];
+                                    else
+                                        value = 0;
+                                    
+                                history = item.Timestamps.map((value, index) => {
+                                 
+                                  if ( this.#metricCatalog[item.Label].factor == 1)
+                                    return [item.Timestamps[index], item.Values[index] ];
+                                  else
+                                    return [item.Timestamps[index], item.Values[index] / this.#metricCatalog[item.Label].factor ];
+                                    
+                                });
+                                
+                                
+                                for (let iMinutes=1; iMinutes <= delay ; iMinutes++){
+                                    history.push([this.#addMinutes(new Date(item.Timestamps[0]),iMinutes), null ]);         
+                                }
+                                
+                            }
+                            else {
+                                history = [];
+                                value = 0;
+                            }
+                            
+                            this.#metrics[item.Label] = { value, value, history : history };
+                    }
+                    catch(err){
+                        this.#objLog.write("refreshData","err",err);
+                    }
+            });
+            
+        }
+        
+        
+        //-- Get Table Details
+        getAllTableData(){
+            var results = {};
+            try {
+                
+                var history = {};
+                for (let metric of Object.keys(this.#metrics)) {
+                    
+                    if ( this.#metrics[metric].history.length > 0 ){
+                        results = {...results, [metric] : this.#metrics[metric].value };
+                        history = {...history, [metric] : this.#metrics[metric].history };
+                    }
+                    else {
+                        results = {...results, [metric] : 0 };
+                        history = { ...history, [metric] : [] };
+                    }
+                    
+                }
+                
+                results = {...results, history : history, ...this.objectProperties };
+                
+                
+            }
+            catch(err){
+                    this.#objLog.write("getAllTableData","err",err);
+            }
+            return results;
+            
+        }
+        
+        
+        
+        #dateDiff(date){
+            
+            var diff = Math.abs(new Date(date) - new Date());
+            return (Math.floor((diff/1000)/60));
+            
+        }
+        
+        #addMinutes(date, minutes) {
+            
+            date.setMinutes(date.getMinutes() + minutes);
+            return date;
+        }
+        
+        
+        
+        //-- Get GSI metrics
+        async getIndexData(object) {
+            
+            const indexInfo = await AWSObject.getDynamoDBIndexInfo(this.objectProperties.tableName, object.indexName);
+            
+            var metricList = [];
+            var metricCatalog = {
+                        'ConsumedReadCapacityUnits' : { metric : 'ConsumedReadCapacityUnits', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "GlobalSecondaryIndexName", Value: object.indexName } ]  },
+                        'ConsumedWriteCapacityUnits' : { metric : 'ConsumedWriteCapacityUnits', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "GlobalSecondaryIndexName", Value: object.indexName } ]  },
+                        'ReadThrottleEvents' : { metric : 'ReadThrottleEvents', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "GlobalSecondaryIndexName", Value: object.indexName } ]  },
+                        'WriteThrottleEvents' : { metric : 'WriteThrottleEvents', factor : 60, stat : "Sum", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "GlobalSecondaryIndexName", Value: object.indexName } ]  },
+                        'ProvisionedWriteCapacityUnits' : { metric : 'ProvisionedWriteCapacityUnits', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "GlobalSecondaryIndexName", Value: object.indexName }]  },
+                        'ProvisionedReadCapacityUnits' : { metric : 'ProvisionedReadCapacityUnits', factor : 1, stat : "Average", dimension : [{ Name: "TableName", Value: this.objectProperties.tableName }, { Name: "GlobalSecondaryIndexName", Value: object.indexName }]  },
+            };
+            
+            for (let metric of Object.keys(metricCatalog)) {
+                        metricList.push({
+                            namespace : "AWS/DynamoDB",
+                            label : metric,
+                            metric : metricCatalog[metric].metric,
+                            dimension : metricCatalog[metric].dimension,
+                            stat : metricCatalog[metric].stat
+                        });
+                };
+            
+            //-- Get index metrics - AWS CloudWatch
+       
+            const indexMetrics = await AWSObject.getGenericMetricsDataset({ metrics : metricList, interval : 60, period : (1 / 60) });
+            var history = [];
+            var value = 0;
+            var delay = 0;
+            var metrics = {...indexInfo};
+            indexMetrics.forEach(item => {
+                    try {
+                                
+                            if ( item.Timestamps.length > 0 ) {
+                                
+                                item.Timestamps.shift();
+                                item.Values.shift();
+                                
+                                delay = this.#dateDiff(item.Timestamps[0]);
+                                if ( delay <= 5 ) {
+                                    if ( metricCatalog[item.Label].factor == 1)
+                                        value = item.Values[0];
+                                    else
+                                        value = item.Values[0] / metricCatalog[item.Label].factor;
+                                }
+                                else    
+                                    if (item.Label == "ProvisionedWriteCapacityUnits" || item.Label == "ProvisionedReadCapacityUnits")
+                                        value = item.Values[0];
+                                    else
+                                        value = 0;
+                                    
+                                history = item.Timestamps.map((value, index) => {
+                                 
+                                  if ( this.#metricCatalog[item.Label].factor == 1)
+                                    return [item.Timestamps[index], item.Values[index] ];
+                                  else
+                                    return [item.Timestamps[index], item.Values[index] / metricCatalog[item.Label].factor ];
+                                    
+                                });
+                                
+                                
+                                for (let iMinutes=1; iMinutes <= delay ; iMinutes++){
+                                    history.push([this.#addMinutes(new Date(item.Timestamps[0]),iMinutes), null ]);         
+                                }
+                                
+                            }
+                            else {
+                                history = [];
+                                value = 0;
+                            }
+                            
+                            metrics = {...metrics, [item.Label] : value, history : { ...metrics.history, [item.Label] : history } };
+                            
+                    }
+                    catch(err){
+                        this.#objLog.write("getIndexData","err",err);
+                    }
+            });
+            
+            return metrics;
+            
+        }
+        
+        
+}
+
+
+
+module.exports = { classMetrics, classCluster, classNode, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classDocumentDBElasticShard, classElasticacheServerlessCluster, classDynamoDB };
 

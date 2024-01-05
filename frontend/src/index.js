@@ -32,8 +32,8 @@ import SmAuroraMysql01 from "./pages/Sm-aurora-mysql-01";
 import SmAuroraPostgresql01 from "./pages/Sm-aurora-postgresql-01";
 import SmDocumentDB01 from "./pages/Sm-documentdb-01";
 import SmDocumentDB02 from "./pages/Sm-documentdb-02";
-
-
+import SmTablesDynamoDB01 from "./pages/Sm-tablesDynamoDB-01";
+import SmDynamoDB01 from "./pages/Sm-dynamodb-01";
 
 
 //-- Components
@@ -77,6 +77,7 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
                     <Route path="/clusters/memorydb" element={<ProtectedApp><SmClustersMemoryDB /> </ProtectedApp>} />
                     <Route path="/clusters/aurora" element={<ProtectedApp><SmClustersAurora /> </ProtectedApp>} />
                     <Route path="/clusters/documentdb" element={<ProtectedApp><SmClustersDocumentDB /> </ProtectedApp>} />
+                    <Route path="/tables/dynamodb" element={<ProtectedApp> <SmTablesDynamoDB01 /></ProtectedApp>} />
                     <Route path="/logout" element={<ProtectedApp><Logout /> </ProtectedApp>} />
                     <Route path="/sm-mysql-01" element={<ProtectedApp><ProtectedDb> <SmMysql01 /> </ProtectedDb> </ProtectedApp>}  />
                     <Route path="/sm-postgresql-01" element={<ProtectedApp><ProtectedDb> <SmPostgresql01 /></ProtectedDb> </ProtectedApp>} />
@@ -89,6 +90,7 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
                     <Route path="/sm-aurora-postgresql-01" element={<ProtectedApp><ProtectedDb> <SmAuroraPostgresql01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-documentdb-01" element={<ProtectedApp><ProtectedDb> <SmDocumentDB01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-documentdb-02" element={<ProtectedApp><ProtectedDb> <SmDocumentDB02 /></ProtectedDb> </ProtectedApp>} />
+                    <Route path="/sm-dynamodb-01" element={<ProtectedApp> <SmDynamoDB01 /></ProtectedApp>} />
                 </Routes>
               </BrowserRouter>
           </Authenticator.Provider>

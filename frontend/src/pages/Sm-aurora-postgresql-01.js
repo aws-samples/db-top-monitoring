@@ -3,25 +3,25 @@ import Axios from 'axios';
 import { configuration } from './Configs';
 import { useSearchParams } from 'react-router-dom';
 import CustomHeader from "../components/Header";
-import AppLayout from "@awsui/components-react/app-layout";
-import Box from "@awsui/components-react/box";
-import Tabs from "@awsui/components-react/tabs";
-import ColumnLayout from "@awsui/components-react/column-layout";
-import { SplitPanel } from '@awsui/components-react';
+import AppLayout from "@cloudscape-design/components/app-layout";
+import Box from "@cloudscape-design/components/box";
+import Tabs from "@cloudscape-design/components/tabs";
+import ColumnLayout from "@cloudscape-design/components/column-layout";
+import { SplitPanel } from '@cloudscape-design/components';
 
-import Flashbar from "@awsui/components-react/flashbar";
-import StatusIndicator from "@awsui/components-react/status-indicator";
-import Spinner from "@awsui/components-react/spinner";
+import Flashbar from "@cloudscape-design/components/flashbar";
+import StatusIndicator from "@cloudscape-design/components/status-indicator";
+import Spinner from "@cloudscape-design/components/spinner";
 
 import { createLabelFunction } from '../components/Functions';
 import CustomTable from "../components/Table01";
 
-import SpaceBetween from "@awsui/components-react/space-between";
-import Pagination from "@awsui/components-react/pagination";
+import SpaceBetween from "@cloudscape-design/components/space-between";
+import Pagination from "@cloudscape-design/components/pagination";
 
-import Link from "@awsui/components-react/link";
-import Header from "@awsui/components-react/header";
-import Container from "@awsui/components-react/container";
+import Link from "@cloudscape-design/components/link";
+import Header from "@cloudscape-design/components/header";
+import Container from "@cloudscape-design/components/container";
 import AuroraNode  from '../components/CompAuroraNode02';
 import CompMetric01  from '../components/Metric01';
 import ChartLine02  from '../components/ChartLine02';
@@ -424,7 +424,7 @@ function App() {
                                             { clusterStats['cluster']['status'] != 'available' &&
                                                 <Spinner size="big" />
                                             }
-                                            <Box variant="h2" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
+                                            <Box variant="h3" color="text-status-inactive" >{parameter_object_values['rds_host']}</Box>
                                         </SpaceBetween>
                                     </td>
                                     <td style={{"width":"15%","padding-left": "1em", "border-left": "4px solid " + configuration.colors.lines.separator100,}}>  

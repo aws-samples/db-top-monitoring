@@ -2,12 +2,12 @@ import {memo,useState} from 'react';
 import {  getMatchesCountText, paginationLabels, pageSizePreference, EmptyState } from './Functions';
 
 import { useCollection } from '@cloudscape-design/collection-hooks';
-import {CollectionPreferences,Pagination } from '@awsui/components-react';
-import TextFilter from "@awsui/components-react/text-filter";
+import {CollectionPreferences,Pagination } from '@cloudscape-design/components';
+import TextFilter from "@cloudscape-design/components/text-filter";
 
-import Table from "@awsui/components-react/table";
-import Header from "@awsui/components-react/header";
-import Button from "@awsui/components-react/button";
+import Table from "@cloudscape-design/components/table";
+import Header from "@cloudscape-design/components/header";
+import Button from "@cloudscape-design/components/button";
 
 const TableComponent = memo(({columnsTable,visibleContent, dataset, title, description = "" }) => {
 

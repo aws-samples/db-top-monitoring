@@ -6,19 +6,19 @@ import { SideMainLayoutHeader,SideMainLayoutMenu, breadCrumbs } from './Configs'
 //import ContentLayout from '@cloudscape-design/components/content-layout';
 
 import CustomHeader from "../components/HeaderApp";
-import AppLayout from "@awsui/components-react/app-layout";
-import SideNavigation from '@awsui/components-react/side-navigation';
-import ContentLayout from '@awsui/components-react/content-layout';
+import AppLayout from "@cloudscape-design/components/app-layout";
+import SideNavigation from '@cloudscape-design/components/side-navigation';
+import ContentLayout from '@cloudscape-design/components/content-layout';
 import { configuration } from './Configs';
 import { applicationVersionUpdate } from '../components/Functions';
 
-import Flashbar from "@awsui/components-react/flashbar";
-import Button from "@awsui/components-react/button";
-import Container from "@awsui/components-react/container";
-import Header from "@awsui/components-react/header";
-import Box from "@awsui/components-react/box";
-import ColumnLayout from "@awsui/components-react/column-layout";
-import Badge from "@awsui/components-react/badge";
+import Flashbar from "@cloudscape-design/components/flashbar";
+import Button from "@cloudscape-design/components/button";
+import Container from "@cloudscape-design/components/container";
+import Header from "@cloudscape-design/components/header";
+import Box from "@cloudscape-design/components/box";
+import ColumnLayout from "@cloudscape-design/components/column-layout";
+import Badge from "@cloudscape-design/components/badge";
 
 import '@aws-amplify/ui-react/styles.css';
 
