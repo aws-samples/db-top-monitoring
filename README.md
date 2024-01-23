@@ -208,7 +208,6 @@ Override the warnings and proceed to the site. To prevent site visitors from enc
 CA-signed certificate that not only encrypts, but also publicly authenticates you as the owner of the site.
 
 
-
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
