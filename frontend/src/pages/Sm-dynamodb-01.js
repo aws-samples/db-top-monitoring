@@ -10,6 +10,7 @@ import Tabs from "@cloudscape-design/components/tabs";
 import ColumnLayout from "@cloudscape-design/components/column-layout";
 import { SplitPanel } from '@cloudscape-design/components';
 
+import Textarea from "@cloudscape-design/components/textarea";
 import FormField from "@cloudscape-design/components/form-field";
 import Select from "@cloudscape-design/components/select";
 import Flashbar from "@cloudscape-design/components/flashbar";
@@ -1290,11 +1291,11 @@ function App() {
                                                                       </div>
                                                                       <div>
                                                                             <Box variant="awsui-key-label">WCU</Box>
-                                                                            <div>{tableStats['table']['wcu']}</div>
+                                                                            <div>{(tableStats['table']['wcu'] == "-1" ? "On-Demand" : tableStats['table']['wcu'] )}</div>
                                                                       </div>
                                                                       <div>
                                                                             <Box variant="awsui-key-label">RCU</Box>
-                                                                            <div>{tableStats['table']['rcu']}</div>
+                                                                            <div>{(tableStats['table']['rcu'] == "-1" ? "On-Demand" : tableStats['table']['rcu'] )}</div>
                                                                       </div>
                                                                     </ColumnLayout>
                                                                     <br/>
@@ -1314,9 +1315,10 @@ function App() {
                                                                     <ColumnLayout columns={1} variant="text-grid">
                                                                         <div>
                                                                             <Box variant="awsui-key-label">Metadata</Box>
-                                                                            <Box variant="code">
-                                                                                {JSON.stringify(tableStats['table']['metadata'])}
-                                                                            </Box>
+                                                                            <Textarea
+                                                                              rows = {20}
+                                                                              value={JSON.stringify(tableStats['table']['metadata'],undefined,4)}
+                                                                            />
                                                                         </div>
                                                                     </ColumnLayout>
                                                                   </Container>

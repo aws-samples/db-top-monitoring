@@ -53,6 +53,7 @@ DBTop Monitoring Solution currently supports following database engines:
     - [Amazon ElastiCache for Redis](https://aws.amazon.com/elasticache/redis/)
     - [Amazon MemoryDB for Redis](https://aws.amazon.com/memorydb/)
 - [Amazon DocumentDB (with MongoDB compatibility)](https://aws.amazon.com/documentdb/)
+- [Amazon DynamoDB](https://aws.amazon.com/dynamodb/)
 
 Additional expanded support coming later to :
 

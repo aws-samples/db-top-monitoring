@@ -559,62 +559,109 @@ export default function App() {
                         id: "tab01",
                         content: 
                           
-                          <>
-                          <table style={{"width":"100%", "padding": "1em", "background-color ": "black"}}>
-                                <tr>  
-                                   <td>        
-                                        <Container>
-                                              
+                          <div>
+                            <table style={{"width":"100%", "padding": "1em", "background-color ": "black"}}>
+                                  <tr>  
+                                     <td>        
+                                          <Container>
+                                                
+                                                  <table style={{"width":"100%"}}>
+                                                      <tr>  
+                                                        <td style={{"width":"12.5%","padding-left": "1em"}}>  
+                                                            <CompMetric02
+                                                              value={ instanceStats['cpuUsage'] || 0 }
+                                                              title={"CPU Usage (%)"}
+                                                              precision={0}
+                                                              format={3}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                            <ProgressBar value={ instanceStats['cpuUsage'] || 0 }
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={ instanceStats['memoryUsage'] || 0 }
+                                                              title={"Memory Usage(%)"}
+                                                              precision={0}
+                                                              format={3}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                            <ProgressBar value={ instanceStats['memoryUsage'] || 0 }
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={instanceStats['iops'] || 0}
+                                                              title={"IOPS"}
+                                                              precision={0}
+                                                              format={3}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={instanceStats['network'] || 0}
+                                                              title={"Network"}
+                                                              precision={0}
+                                                              format={2}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={instanceStats['ioreads'] || 0}
+                                                              title={"Reads (IOPS)"}
+                                                              precision={0}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={instanceStats['iowrites'] || 0}
+                                                              title={"Write (IOPS)"}
+                                                              precision={0}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={instanceStats['networkTx'] || 0}
+                                                              title={"Network TX(Bytes/sec)"}
+                                                              precision={0}
+                                                              format={2}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                        </td>
+                                                        <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                            <CompMetric02
+                                                              value={instanceStats['networkRx'] || 0}
+                                                              title={"Network RX(Bytes/sec)"}
+                                                              precision={0}
+                                                              format={2}
+                                                              fontColorValue={configuration.colors.fonts.metric100}
+                                                              fontSizeValue={"18px"}
+                                                            />
+                                                        </td>
+                                                        
+                                                  </tr>  
+                                                
+                                                </table>  
+                                                <br />  
+                                                <br />  
                                                 <table style={{"width":"100%"}}>
                                                     <tr>  
-                                                      <td style={{"width":"12.5%","padding-left": "1em"}}>  
+                                                      <td style={{"width":"12.5%","padding-left": "1em"}}> 
                                                           <CompMetric02
-                                                            value={ instanceStats['cpuUsage'] || 0 }
-                                                            title={"CPU Usage (%)"}
-                                                            precision={0}
-                                                            format={3}
-                                                            fontColorValue={configuration.colors.fonts.metric100}
-                                                            fontSizeValue={"18px"}
-                                                          />
-                                                          <ProgressBar value={ instanceStats['cpuUsage'] || 0 }
-                                                          />
-                                                      </td>
-                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                          <CompMetric02
-                                                            value={ instanceStats['memoryUsage'] || 0 }
-                                                            title={"Memory Usage(%)"}
-                                                            precision={0}
-                                                            format={3}
-                                                            fontColorValue={configuration.colors.fonts.metric100}
-                                                            fontSizeValue={"18px"}
-                                                          />
-                                                          <ProgressBar value={ instanceStats['memoryUsage'] || 0 }
-                                                          />
-                                                      </td>
-                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                          <CompMetric02
-                                                            value={instanceStats['iops'] || 0}
-                                                            title={"IOPS"}
-                                                            precision={0}
-                                                            format={3}
-                                                            fontColorValue={configuration.colors.fonts.metric100}
-                                                            fontSizeValue={"18px"}
-                                                          />
-                                                      </td>
-                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                          <CompMetric02
-                                                            value={instanceStats['network'] || 0}
-                                                            title={"Network"}
-                                                            precision={0}
-                                                            format={2}
-                                                            fontColorValue={configuration.colors.fonts.metric100}
-                                                            fontSizeValue={"18px"}
-                                                          />
-                                                      </td>
-                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                          <CompMetric02
-                                                            value={instanceStats['ioreads'] || 0}
-                                                            title={"Reads (IOPS)"}
+                                                            value={ instanceStats['comCommit'] || 0 }
+                                                            title={"Commits/sec"}
+                                                            type={1}
                                                             precision={0}
                                                             fontColorValue={configuration.colors.fonts.metric100}
                                                             fontSizeValue={"18px"}
@@ -622,8 +669,49 @@ export default function App() {
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={instanceStats['iowrites'] || 0}
-                                                            title={"Write (IOPS)"}
+                                                            value={ instanceStats['queries'] || 0 }
+                                                            title={"Queries/sec"}
+                                                            precision={0}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
+                                                          />
+   
+                                                      </td>
+                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                           <CompMetric02
+                                                            value={ instanceStats['comSelect'] || 0 }
+                                                            title={"Selects/sec"}
+                                                            type={1}
+                                                            precision={0}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
+                                                          />
+                                                      </td>
+                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                           <CompMetric02
+                                                            value={ instanceStats['comInsert'] || 0 }
+                                                            title={"Insert/sec"}
+                                                            type={1}
+                                                            precision={0}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
+                                                          />
+                                                      </td>
+                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                           <CompMetric02
+                                                            value={ instanceStats['comUpdate'] || 0 }
+                                                            title={"Update/sec"}
+                                                            type={1}
+                                                            precision={0}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"18px"}
+                                                          />
+                                                      </td>
+                                                      <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
+                                                           <CompMetric02
+                                                            value={ instanceStats['comDelete'] || 0 }
+                                                            title={"Delete/sec"}
+                                                            type={1}
                                                             precision={0}
                                                             fontColorValue={configuration.colors.fonts.metric100}
                                                             fontSizeValue={"18px"}
@@ -631,212 +719,117 @@ export default function App() {
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
                                                           <CompMetric02
-                                                            value={instanceStats['networkTx'] || 0}
-                                                            title={"Network TX(Bytes/sec)"}
+                                                            value={ instanceStats['threads'] || 0 }
+                                                            title={"Threads"}
+                                                            type={2}
                                                             precision={0}
-                                                            format={2}
                                                             fontColorValue={configuration.colors.fonts.metric100}
                                                             fontSizeValue={"18px"}
                                                           />
                                                       </td>
                                                       <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                          <CompMetric02
-                                                            value={instanceStats['networkRx'] || 0}
-                                                            title={"Network RX(Bytes/sec)"}
+                                                           <CompMetric02
+                                                            value={ instanceStats['threadsRunning'] || 0 }
+                                                            title={"ThreadsRunning"}
+                                                            type={2}
                                                             precision={0}
-                                                            format={2}
                                                             fontColorValue={configuration.colors.fonts.metric100}
                                                             fontSizeValue={"18px"}
                                                           />
                                                       </td>
-                                                      
+                                                     
                                                 </tr>  
-                                              
-                                              </table>  
-                                              <br />  
-                                              <br />  
-                                              <table style={{"width":"100%"}}>
-                                                  <tr>  
-                                                    <td style={{"width":"12.5%","padding-left": "1em"}}> 
-                                                        <CompMetric02
-                                                          value={ instanceStats['comCommit'] || 0 }
-                                                          title={"Commits/sec"}
-                                                          type={1}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                        <CompMetric02
-                                                          value={ instanceStats['queries'] || 0 }
-                                                          title={"Queries/sec"}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
- 
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                         <CompMetric02
-                                                          value={ instanceStats['comSelect'] || 0 }
-                                                          title={"Selects/sec"}
-                                                          type={1}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                         <CompMetric02
-                                                          value={ instanceStats['comInsert'] || 0 }
-                                                          title={"Insert/sec"}
-                                                          type={1}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                         <CompMetric02
-                                                          value={ instanceStats['comUpdate'] || 0 }
-                                                          title={"Update/sec"}
-                                                          type={1}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                         <CompMetric02
-                                                          value={ instanceStats['comDelete'] || 0 }
-                                                          title={"Delete/sec"}
-                                                          type={1}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                        <CompMetric02
-                                                          value={ instanceStats['threads'] || 0 }
-                                                          title={"Threads"}
-                                                          type={2}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                    <td style={{"width":"12.5%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                         <CompMetric02
-                                                          value={ instanceStats['threadsRunning'] || 0 }
-                                                          title={"ThreadsRunning"}
-                                                          type={2}
-                                                          precision={0}
-                                                          fontColorValue={configuration.colors.fonts.metric100}
-                                                          fontSizeValue={"18px"}
-                                                        />
-                                                    </td>
-                                                   
-                                              </tr>  
-                                              
-                                              </table>  
-                                               
-                                              <br />
-                                              <table style={{"width":"100%"}}>
-                                                  <tr>  
-                                                    <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify( [instanceStats['history']['threadsRunning']] )} title={"Active Sessions"} height="200px" />
-                                                    </td>
-                                                    <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify( [
-                                                                                                instanceStats['history']['comCommit'],
-                                                                                                instanceStats['history']['comRollback']
-                                                                                              ] )} title={"Transactions/sec"} height="200px" />
-                                                    </td>
-                                                    <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify( [instanceStats['history']['queries']] )} title={"Queries/sec"} height="200px" />
-                                                    </td>
-                                                    <td style={{"width":"25%","padding-left": "1em"}}> 
-                                                        <ChartLine02 series={JSON.stringify( [
-                                                                                                instanceStats['history']['comSelect'],
-                                                                                                instanceStats['history']['comUpdate'],
-                                                                                                instanceStats['history']['comInsert'],
-                                                                                                instanceStats['history']['comDelete'],
-                                                                                              ] )} title={"Operations/sec"} height="200px" />
-                                                    </td>
-                                                  </tr>
-                                              </table>
-
-                                        </Container>
-                                        <br/>
-                                    </td>  
-                                </tr>
-                              
-                                <tr>  
-                                   <td>
-                                            <Table
-                                              {...collectionProps}
-                                              selectionType="single"
-                                              header={
-                                                <Header
-                                                  variant="h2"
-                                                  counter= {"(" + instanceStats['sessions'].length + ")"} 
-                                                  actions={
-                                                            <Toggle
-                                                                onChange={({ detail }) =>{
-                                                                    setcollectionState(detail.checked);
-                                                                    pauseCollection.current=detail.checked;
-                                                                  }
-                                                                }
-                                                                checked={collectionState}
-                                                              >
-                                                                Auto-Refresh
-                                                              </Toggle>
-                                                                        
-                                                          }
-                                                >
-                                                  Active Sessions
-                                                </Header>
-                                              }
-                                              columnDefinitions={columnsTable}
-                                              visibleColumns={preferences.visibleContent}
-                                              items={items}
-                                              pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
-                                              filter={
-                                                <TextFilter
-                                                  {...filterProps}
-                                                  countText={getMatchesCountText(filteredItemsCount)}
-                                                  filteringAriaLabel="Filter instances"
-                                                />
-                                              }
-                                              preferences={
-                                                <CollectionPreferences
-                                                  {...collectionPreferencesProps}
-                                                  preferences={preferences}
-                                                  onConfirm={({ detail }) => setPreferences(detail)}
-                                                />
-                                              }
-                                              onSelectionChange={({ detail }) => {
-                                                  setSelectedItems(detail.selectedItems);
-                                                  setsplitPanelShow(true);
-                                                  }
-                                                }
-                                              selectedItems={selectedItems}
-                                              resizableColumns
-                                              stickyHeader
-                                              loadingText="Loading records"
+                                                
+                                                </table>  
+                                                 
+                                                <br />
+                                                <table style={{"width":"100%"}}>
+                                                    <tr>  
+                                                      <td style={{"width":"25%","padding-left": "1em"}}> 
+                                                          <ChartLine02 series={JSON.stringify( [instanceStats['history']['threadsRunning']] )} title={"Active Sessions"} height="200px" />
+                                                      </td>
+                                                      <td style={{"width":"25%","padding-left": "1em"}}> 
+                                                          <ChartLine02 series={JSON.stringify( [
+                                                                                                  instanceStats['history']['comCommit'],
+                                                                                                  instanceStats['history']['comRollback']
+                                                                                                ] )} title={"Transactions/sec"} height="200px" />
+                                                      </td>
+                                                      <td style={{"width":"25%","padding-left": "1em"}}> 
+                                                          <ChartLine02 series={JSON.stringify( [instanceStats['history']['queries']] )} title={"Queries/sec"} height="200px" />
+                                                      </td>
+                                                      <td style={{"width":"25%","padding-left": "1em"}}> 
+                                                          <ChartLine02 series={JSON.stringify( [
+                                                                                                  instanceStats['history']['comSelect'],
+                                                                                                  instanceStats['history']['comUpdate'],
+                                                                                                  instanceStats['history']['comInsert'],
+                                                                                                  instanceStats['history']['comDelete'],
+                                                                                                ] )} title={"Operations/sec"} height="200px" />
+                                                      </td>
+                                                    </tr>
+                                                </table>
+  
+                                          </Container>
+                                      </td>  
+                                  </tr>
+                              </table> 
+                              <div style={{ "padding" : "1em" }}>
+                                        <Table
+                                          {...collectionProps}
+                                          selectionType="single"
+                                          header={
+                                            <Header
+                                              variant="h3"
+                                              counter= {"(" + instanceStats['sessions'].length + ")"} 
+                                              actions={
+                                                        <Toggle
+                                                            onChange={({ detail }) =>{
+                                                                setcollectionState(detail.checked);
+                                                                pauseCollection.current=detail.checked;
+                                                              }
+                                                            }
+                                                            checked={collectionState}
+                                                          >
+                                                            Auto-Refresh
+                                                          </Toggle>
+                                                                    
+                                                      }
+                                            >
+                                              Active Sessions
+                                            </Header>
+                                          }
+                                          columnDefinitions={columnsTable}
+                                          visibleColumns={preferences.visibleContent}
+                                          items={items}
+                                          pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
+                                          filter={
+                                            <TextFilter
+                                              {...filterProps}
+                                              countText={getMatchesCountText(filteredItemsCount)}
+                                              filteringAriaLabel="Filter instances"
                                             />
-
-
-                                    </td>  
-                                </tr>
-                            </table>       
+                                          }
+                                          preferences={
+                                            <CollectionPreferences
+                                              {...collectionPreferencesProps}
+                                              preferences={preferences}
+                                              onConfirm={({ detail }) => setPreferences(detail)}
+                                            />
+                                          }
+                                          onSelectionChange={({ detail }) => {
+                                              setSelectedItems(detail.selectedItems);
+                                              setsplitPanelShow(true);
+                                              }
+                                            }
+                                          selectedItems={selectedItems}
+                                          resizableColumns
+                                          stickyHeader
+                                          loadingText="Loading records"
+                                        />
+  
+  
+                                      </div>  
                           
-                          </>
-                          
-                          
-                        
+                              </div>
                         
                       },
                       {
@@ -1638,278 +1631,269 @@ export default function App() {
                         label: "Enhanced Monitoring",
                         id: "tab03",
                         content: 
-                        <>
+                        <div>
+                            <table style={{"width":"100%", "padding": "1em"}}>
+                                <tr>  
+                                   <td> 
                         
-                        <table style={{"width":"100%", "padding": "1em"}}>
-                            <tr>  
-                               <td> 
-                    
-                                  <Container>
-                                  <table style={{"width":"100%"}}>
-                                      <tr>  
-                                         <td style={{"width":"15%", "text-align":"center"}}>        
-                                                <CompMetric02
-                                                  value={ instanceStats['cpuUsage'] || 0 }
-                                                  title={"Usage %"}
-                                                  precision={0}
-                                                  format={3}
-                                                  fontColorValue={configuration.colors.fonts.metric100}
-                                                />
-                                                <Box variant="h4">CPU</Box>
-                                          </td>
-                                          <td style={{"width":"25%", "text-align":"center", "border-left": "2px solid red", "padding-left": "1em"}}>  
-                                                
-                                                <ColumnLayout columns={4} variant="text-grid">
-                                                    <CompMetric03
-                                                      value={ instanceStats['cpuUser'] || 0 }
-                                                      title={"User"}
-                                                      precision={1}
-                                                      format={1}
-                                                      fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
-                                                    />
-                                                    
-                                                    <CompMetric03
-                                                      value={ instanceStats['cpuSys'] || 0 }
-                                                      title={"System"}
-                                                      precision={1}
-                                                      format={1}
-                                                      fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
-                                                    />
-                                                    
-                                                    <CompMetric03
-                                                      value={ instanceStats['cpuWait'] || 0 }
-                                                      title={"Wait"}
-                                                      precision={1}
-                                                      format={1}
-                                                      fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
-                                                    />
-                                                    
-                                                    <CompMetric03
-                                                      value={ instanceStats['cpuSteal'] || 0 }
-                                                      title={"Steal"}
-                                                      precision={1}
-                                                      format={1}
-                                                      fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
-                                                    />
-                                                    
-                                                    <CompMetric03
-                                                      value={ instanceStats['cpuNice'] || 0 }
-                                                      title={"Nice"}
-                                                      precision={1}
-                                                      format={1}
-                                                      fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
-                                                    />
-                                                    
-                                                    <CompMetric03
-                                                      value={ instanceStats['cpuGuest'] || 0 }
-                                                      title={"Guest"}
-                                                      precision={1}
-                                                      format={1}
-                                                      fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
-                                                    />
-                                                  
-                                                </ColumnLayout>
-                                                
-                                          </td>
-                                          
-                                          <td style={{"width":"60%"}}>        
-                                                <ChartLine02 
-                                                    series={JSON.stringify([ 
-                                                                              instanceStats['history']['cpuUsage'],
-                                                                              instanceStats['history']['cpuUser'],
-                                                                              instanceStats['history']['cpuSys'],
-                                                                              instanceStats['history']['cpuWait'],
-                                                                              instanceStats['history']['cpuGuest'],
-                                                                              instanceStats['history']['cpuSteal'],
-                                                                              instanceStats['history']['cpuNice'],
-                                                                              instanceStats['history']['cpuIrq']
-                                                                              
-                                                                          ])} 
-                                                    title={"CPU Usage (%)"} height="200px" 
-                                                />
-                                          </td>
-                                      </tr>
-                                  </table>
-                                  </Container>
-                                  <br/>
-                                  <Container>
-                                  <table style={{"width":"100%"}}>
-                                      <tr>  
-                                         <td style={{"width":"15%", "text-align":"center"}}>        
-                                                 <CompMetric02
-                                                  value={ instanceStats['memoryUsage'] || 0 }
-                                                  title={"Usage %"}
-                                                  precision={0}
-                                                  format={3}
-                                                  fontColorValue={configuration.colors.fonts.metric100}
-                                                />
-                                                <Box variant="h4">Memory</Box>
-                                          </td>
-                                          <td style={{"width":"25%", "text-align":"center", "border-left": "2px solid red", "padding-left": "1em"}}>  
-                                                
-                                                <ColumnLayout columns={4} variant="text-grid">
-                                                    <CompMetric03
-                                                      value={ instanceStats['memoryTotal'] || 0 }
-                                                      title={"Total"}
+                                      <Container>
+                                      <table style={{"width":"100%"}}>
+                                          <tr>  
+                                             <td style={{"width":"15%", "text-align":"center"}}>        
+                                                    <CompMetric02
+                                                      value={ instanceStats['cpuUsage'] || 0 }
+                                                      title={"Usage %"}
                                                       precision={0}
-                                                      format={2}
+                                                      format={3}
                                                       fontColorValue={configuration.colors.fonts.metric100}
-                                                      fontSizeValue={"16px"}
                                                     />
-                                                  
-                                                    <CompMetric03
-                                                        value={ instanceStats['memoryActive'] || 0 }
-                                                        title={"Active"}
-                                                        precision={0}
-                                                        format={2}
-                                                        fontColorValue={configuration.colors.fonts.metric100}
-                                                        fontSizeValue={"16px"}
-                                                    />
+                                                    <Box variant="h4">CPU</Box>
+                                              </td>
+                                              <td style={{"width":"25%", "text-align":"center", "border-left": "2px solid red", "padding-left": "1em"}}>  
                                                     
-                                                    <CompMetric03
-                                                        value={ instanceStats['memoryInactive'] || 0 }
-                                                        title={"Inactive"}
-                                                        precision={0}
-                                                        format={2}
-                                                        fontColorValue={configuration.colors.fonts.metric100}
-                                                        fontSizeValue={"16px"}
-                                                    />
+                                                    <ColumnLayout columns={4} variant="text-grid">
+                                                        <CompMetric03
+                                                          value={ instanceStats['cpuUser'] || 0 }
+                                                          title={"User"}
+                                                          precision={1}
+                                                          format={1}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                          value={ instanceStats['cpuSys'] || 0 }
+                                                          title={"System"}
+                                                          precision={1}
+                                                          format={1}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                          value={ instanceStats['cpuWait'] || 0 }
+                                                          title={"Wait"}
+                                                          precision={1}
+                                                          format={1}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                          value={ instanceStats['cpuSteal'] || 0 }
+                                                          title={"Steal"}
+                                                          precision={1}
+                                                          format={1}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                          value={ instanceStats['cpuNice'] || 0 }
+                                                          title={"Nice"}
+                                                          precision={1}
+                                                          format={1}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                          value={ instanceStats['cpuGuest'] || 0 }
+                                                          title={"Guest"}
+                                                          precision={1}
+                                                          format={1}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                      
+                                                    </ColumnLayout>
                                                     
-                                                    <CompMetric03
-                                                        value={ instanceStats['memoryFree'] || 0 }
-                                                        title={"Free"}
-                                                        precision={0}
-                                                        format={2}
-                                                        fontColorValue={configuration.colors.fonts.metric100}
-                                                        fontSizeValue={"16px"}
-                                                    />
-                                                  
-                                                </ColumnLayout>
-                                                
-                                          </td>
-                                          <td style={{"width":"60%"}}>        
-                                              <ChartLine02 
-                                                    series={JSON.stringify([instanceStats['history']['memoryUsage']])} 
-                                                    title={"Memory Usage (%)"} height="200px" 
-                                                />
-                                          </td>
-                                      </tr>
-                                  </table>
-                                  </Container>
-                                  <br/>
-                                  <Container>
-                                  <table style={{"width":"100%"}}>
-                                      <tr>  
-                                      
-                                          <td style={{"width":"15%", "text-align":"center"}}>      
-                                              <CompMetric02
-                                                value={ instanceStats['ioreads'] || 0 }
-                                                title={"IOPS"}
-                                                precision={0}
-                                                fontColorValue={configuration.colors.fonts.metric100}
-                                              />
-                                              <Box variant="h4">I/O Reads</Box>
-                                          </td>
-                                         
-                                          <td style={{"width":"15%", "text-align":"center", "border-left": "2px solid red"}}>  
-                                              <CompMetric02
-                                                value={ instanceStats['iowrites'] || 0 }
-                                                title={"IOPS"}
-                                                precision={0}
-                                                fontColorValue={configuration.colors.fonts.metric100}
-                                              />
-                                              <Box variant="h4">I/O Writes</Box>
-                                          </td>
-                          
-                                          <td style={{"width":"35%"}}>    
-                                              <ChartLine02 
-                                                    series={JSON.stringify([ instanceStats['history']['ioreads'] ])} 
-                                                    title={"I/O Reads"} height="200px" 
-                                                />
-                                          </td>
-                                          
-                                          <td style={{"width":"35%", "padding-left": "1em"}}>        
-                                              <ChartLine02 
-                                                    series={JSON.stringify([ instanceStats['history']['iowrites'] ])} 
-                                                    title={"I/O Writes"} height="200px" 
-                                                />
-                                          </td>
-                                        
-                                      </tr>
-                                  </table>
-                                  </Container>
-                                  <br/>
-                                  <Container>
-                                  <table style={{"width":"100%"}}>
-                                      <tr>  
-                                      
-                                          <td style={{"width":"15%", "text-align":"center"}}>        
-                                              <CompMetric02
-                                                value={ instanceStats['networkTx'] || 0 }
-                                                title={"Bytes/sec"}
-                                                precision={0}
-                                                format={2}
-                                                fontColorValue={configuration.colors.fonts.metric100}
-                                              />
-                                              <Box variant="h4">Network(TX)</Box>
-                                          </td>
-                                         
-                                          <td style={{"width":"15%", "text-align":"center", "border-left": "2px solid red"}}>  
-                                              <CompMetric02
-                                                value={ instanceStats['networkRx'] || 0 }
-                                                title={"Bytes/sec"}
-                                                precision={0}
-                                                format={2}
-                                                fontColorValue={configuration.colors.fonts.metric100}
-                                              />
-                                              <Box variant="h4">Network(RX)</Box>
-                                          </td>
-                          
-                                          <td style={{"width":"35%"}}>        
-                                              <ChartLine02 
-                                                    series={JSON.stringify([ instanceStats['history']['networkTx'] ])} 
-                                                    title={"Network(TX)"} height="200px" 
-                                                />
-                                          </td>
-                                          
-                                          <td style={{"width":"35%", "padding-left": "1em"}}>        
-                                              <ChartLine02 
-                                                    series={JSON.stringify([ instanceStats['history']['networkRx'] ])} 
-                                                    title={"Network(RX)"} height="200px" 
-                                                />
-                                          </td>
-                                        
-                                      </tr>
-                                  </table>
-                                  </Container>
-                                  <br/>
-                                  <table style={{"width":"100%"}}>
-                                      <tr>  
-                                          <td style={{"width":"100%"}}>
-                                          
-                                              <CustomTable
-                                                  columnsTable={columnsTableEm}
-                                                  visibleContent={visibleContentEm}
-                                                  dataset={instanceStats['processes']}
-                                                  title={"Processes"}
-                                              />
+                                              </td>
                                               
-                                          </td>
-                                      </tr>
-                                  </table>
-                                  
-                                  
-                                  </td>
-                            </tr>
-                        </table>  
+                                              <td style={{"width":"60%"}}>        
+                                                    <ChartLine02 
+                                                        series={JSON.stringify([ 
+                                                                                  instanceStats['history']['cpuUsage'],
+                                                                                  instanceStats['history']['cpuUser'],
+                                                                                  instanceStats['history']['cpuSys'],
+                                                                                  instanceStats['history']['cpuWait'],
+                                                                                  instanceStats['history']['cpuGuest'],
+                                                                                  instanceStats['history']['cpuSteal'],
+                                                                                  instanceStats['history']['cpuNice'],
+                                                                                  instanceStats['history']['cpuIrq']
+                                                                                  
+                                                                              ])} 
+                                                        title={"CPU Usage (%)"} height="200px" 
+                                                    />
+                                              </td>
+                                          </tr>
+                                      </table>
+                                      </Container>
+                                      <br/>
+                                      <Container>
+                                      <table style={{"width":"100%"}}>
+                                          <tr>  
+                                             <td style={{"width":"15%", "text-align":"center"}}>        
+                                                     <CompMetric02
+                                                      value={ instanceStats['memoryUsage'] || 0 }
+                                                      title={"Usage %"}
+                                                      precision={0}
+                                                      format={3}
+                                                      fontColorValue={configuration.colors.fonts.metric100}
+                                                    />
+                                                    <Box variant="h4">Memory</Box>
+                                              </td>
+                                              <td style={{"width":"25%", "text-align":"center", "border-left": "2px solid red", "padding-left": "1em"}}>  
+                                                    
+                                                    <ColumnLayout columns={4} variant="text-grid">
+                                                        <CompMetric03
+                                                          value={ instanceStats['memoryTotal'] || 0 }
+                                                          title={"Total"}
+                                                          precision={0}
+                                                          format={2}
+                                                          fontColorValue={configuration.colors.fonts.metric100}
+                                                          fontSizeValue={"16px"}
+                                                        />
+                                                      
+                                                        <CompMetric03
+                                                            value={ instanceStats['memoryActive'] || 0 }
+                                                            title={"Active"}
+                                                            precision={0}
+                                                            format={2}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                            value={ instanceStats['memoryInactive'] || 0 }
+                                                            title={"Inactive"}
+                                                            precision={0}
+                                                            format={2}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                        
+                                                        <CompMetric03
+                                                            value={ instanceStats['memoryFree'] || 0 }
+                                                            title={"Free"}
+                                                            precision={0}
+                                                            format={2}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                      
+                                                    </ColumnLayout>
+                                                    
+                                              </td>
+                                              <td style={{"width":"60%"}}>        
+                                                  <ChartLine02 
+                                                        series={JSON.stringify([instanceStats['history']['memoryUsage']])} 
+                                                        title={"Memory Usage (%)"} height="200px" 
+                                                    />
+                                              </td>
+                                          </tr>
+                                      </table>
+                                      </Container>
+                                      <br/>
+                                      <Container>
+                                      <table style={{"width":"100%"}}>
+                                          <tr>  
+                                          
+                                              <td style={{"width":"15%", "text-align":"center"}}>      
+                                                  <CompMetric02
+                                                    value={ instanceStats['ioreads'] || 0 }
+                                                    title={"IOPS"}
+                                                    precision={0}
+                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                  />
+                                                  <Box variant="h4">I/O Reads</Box>
+                                              </td>
+                                             
+                                              <td style={{"width":"15%", "text-align":"center", "border-left": "2px solid red"}}>  
+                                                  <CompMetric02
+                                                    value={ instanceStats['iowrites'] || 0 }
+                                                    title={"IOPS"}
+                                                    precision={0}
+                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                  />
+                                                  <Box variant="h4">I/O Writes</Box>
+                                              </td>
+                              
+                                              <td style={{"width":"35%"}}>    
+                                                  <ChartLine02 
+                                                        series={JSON.stringify([ instanceStats['history']['ioreads'] ])} 
+                                                        title={"I/O Reads"} height="200px" 
+                                                    />
+                                              </td>
+                                              
+                                              <td style={{"width":"35%", "padding-left": "1em"}}>        
+                                                  <ChartLine02 
+                                                        series={JSON.stringify([ instanceStats['history']['iowrites'] ])} 
+                                                        title={"I/O Writes"} height="200px" 
+                                                    />
+                                              </td>
+                                            
+                                          </tr>
+                                      </table>
+                                      </Container>
+                                      <br/>
+                                      <Container>
+                                      <table style={{"width":"100%"}}>
+                                          <tr>  
+                                          
+                                              <td style={{"width":"15%", "text-align":"center"}}>        
+                                                  <CompMetric02
+                                                    value={ instanceStats['networkTx'] || 0 }
+                                                    title={"Bytes/sec"}
+                                                    precision={0}
+                                                    format={2}
+                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                  />
+                                                  <Box variant="h4">Network(TX)</Box>
+                                              </td>
+                                             
+                                              <td style={{"width":"15%", "text-align":"center", "border-left": "2px solid red"}}>  
+                                                  <CompMetric02
+                                                    value={ instanceStats['networkRx'] || 0 }
+                                                    title={"Bytes/sec"}
+                                                    precision={0}
+                                                    format={2}
+                                                    fontColorValue={configuration.colors.fonts.metric100}
+                                                  />
+                                                  <Box variant="h4">Network(RX)</Box>
+                                              </td>
+                              
+                                              <td style={{"width":"35%"}}>        
+                                                  <ChartLine02 
+                                                        series={JSON.stringify([ instanceStats['history']['networkTx'] ])} 
+                                                        title={"Network(TX)"} height="200px" 
+                                                    />
+                                              </td>
+                                              
+                                              <td style={{"width":"35%", "padding-left": "1em"}}>        
+                                                  <ChartLine02 
+                                                        series={JSON.stringify([ instanceStats['history']['networkRx'] ])} 
+                                                        title={"Network(RX)"} height="200px" 
+                                                    />
+                                              </td>
+                                            
+                                          </tr>
+                                      </table>
+                                      </Container>
+                                      </td>
+                                </tr>
+                            </table>  
+                            
+                            <div style={{"padding":"1em"}}>
+                                <CustomTable
+                                    columnsTable={columnsTableEm}
+                                    visibleContent={visibleContentEm}
+                                    dataset={instanceStats['processes']}
+                                    title={"Processes"}
+                                />
+                            </div>
                                     
-                        </>
+                        </div>
                           
                         ,
                       },
@@ -1917,82 +1901,73 @@ export default function App() {
                         label: "Query Editor",
                         id: "tab04",
                         content: 
-                        <>
-                       
-                        <table style={{"width":"100%", "padding": "1em"}}>
-                            <tr>  
-                               <td> 
-                    
-                                  <Container>
-                                    <table style={{"width":"100%"}}>
-                                        <tr>  
-                                           <td style={{"width":"100%", "text-align":"left"}}>     
-                                                <Header variant="h3">
-                                                        SQL Query {(dataQuery.result_code=="0") && <Badge color="green">Execution successful</Badge> }
-                                                      {(dataQuery.result_code=="1") && <Badge color="red">Execution failed</Badge>}
-                                                </Header>
-                                                  <textarea ref={txtSQLText} rows="10" style={{width:"100%"}} />
-                                                  <br/>
-                                                  <br/>
-                                                  <SpaceBetween direction="horizontal" size="xs">
-                                                      <Button variant="primary" onClick={handleClickRunQuery}>Run Query</Button>
-                                                      <Button onClick={() => {txtSQLText.current.value="";}}>Clear</Button>
-                                                  </SpaceBetween>
-                                              
-                                           </td>
-                                        </tr>
-                                        <tr>  
-                                           <td style={{"width":"100%", "text-align":"center"}}>     
-                                               <br/>
-                                              <Table
-                                                    stickyHeader
-                                                    columnDefinitions={dataQuery.columns}
-                                                    items={dataQuery.dataset}
-                                                    loadingText="Loading records"
-                                                    sortingDisabled
-                                                    variant="embedded"
-                                                    selectionType="single"
-                                                    onSelectionChange={({ detail }) => {
-                                                      setSelectedItems(detail.selectedItems);
-                                                      }
-                                                    }
-                                                    selectedItems={selectedItems}
-                                                    empty={
-                                                      <Box textAlign="center" color="inherit">
-                                                        <b>No records</b>
-                                                        <Box
-                                                          padding={{ bottom: "s" }}
-                                                          variant="p"
-                                                          color="inherit"
-                                                        >
-                                                          No records to display.
-                                                        </Box>
-                                                       
-                                                      </Box>
-                                                    }
-                                                    filter={
-                                                     <Header variant="h3" counter={"(" + dataQuery.dataset.length + ")"}
-                                                      >
-                                                        Result Items
+                        <div>
+                            <table style={{"width":"100%", "padding": "1em"}}>
+                                <tr>  
+                                   <td> 
+                        
+                                      <Container>
+                                        <table style={{"width":"100%"}}>
+                                            <tr>  
+                                               <td style={{"width":"100%", "text-align":"left"}}>     
+                                                    <Header variant="h3">
+                                                            SQL Query {(dataQuery.result_code=="0") && <Badge color="green">Execution successful</Badge> }
+                                                          {(dataQuery.result_code=="1") && <Badge color="red">Execution failed</Badge>}
                                                     </Header>
-                                                    }
-                                                    
-                                                   
-                                                  resizableColumns
-                                                  />
-                                          </td>
-                                        </tr>
-                                    </table> 
-                                  </Container> 
-                                  
-                                </td>
-                              </tr>
-                        </table> 
-                        
-                        
-                         </>
+                                                      <textarea ref={txtSQLText} rows="10" style={{width:"100%"}} />
+                                                      <br/>
+                                                      <br/>
+                                                      <SpaceBetween direction="horizontal" size="xs">
+                                                          <Button variant="primary" onClick={handleClickRunQuery}>Run Query</Button>
+                                                          <Button onClick={() => {txtSQLText.current.value="";}}>Clear</Button>
+                                                      </SpaceBetween>
+                                                  
+                                               </td>
+                                            </tr>
+                                        </table> 
+                                      </Container> 
+                                    </td>
+                                  </tr>
+                            </table> 
+                            <div style={{"padding":"1em"}}>     
+                              <Table
+                                    stickyHeader
+                                    columnDefinitions={dataQuery.columns}
+                                    items={dataQuery.dataset}
+                                    loadingText="Loading records"
+                                    sortingDisabled
+                                    selectionType="single"
+                                    onSelectionChange={({ detail }) => {
+                                      setSelectedItems(detail.selectedItems);
+                                      }
+                                    }
+                                    selectedItems={selectedItems}
+                                    empty={
+                                      <Box textAlign="center" color="inherit">
+                                        <b>No records</b>
+                                        <Box
+                                          padding={{ bottom: "s" }}
+                                          variant="p"
+                                          color="inherit"
+                                        >
+                                          No records to display.
+                                        </Box>
+                                       
+                                      </Box>
+                                    }
+                                    filter={
+                                     <Header variant="h3" counter={"(" + dataQuery.dataset.length + ")"}
+                                      >
+                                        Result Items
+                                    </Header>
+                                    }
+                                    
+                                   
+                                  resizableColumns
+                                  />
+                            </div>
+                         </div>
                         ,
-                        
                       },
                       {
                         label: "Instance Information",

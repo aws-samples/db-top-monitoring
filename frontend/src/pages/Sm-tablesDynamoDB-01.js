@@ -336,64 +336,58 @@ function Login() {
             }
             contentType="table"
             content={
-                <>
-                      <table style={{"width":"100%","padding" : "1em"}}>
-                          <tr>  
-                              <td style={{"width":"100%"}}>  
-                                  <Flashbar items={versionMessage} />
-                                  <Table
-                                    {...collectionProps}
-                                    selectionType="single"
-                                    variant="borderless"
-                                    header={
-                                      <Header
-                                        variant="h2"
-                                        counter= {"(" + itemsTable.length + ")"} 
-                                        actions={
-                                                          <SpaceBetween
-                                                            direction="horizontal"
-                                                            size="xs"
-                                                          >
-                                                            <Button variant="primary" disabled={selectedItems[0].identifier === "" ? true : false} onClick={handleClickLogin}>Connect</Button>
-                                                            <Button variant="primary" onClick={() => { gatherTablesDetails(); }}>Refresh</Button>
-                                                          </SpaceBetween>
-                                                  }
-                                      >
-                                        DynamoDB Tables
-                                      </Header>
-                                    }
-                                    columnDefinitions={columnsTable}
-                                    visibleColumns={preferences.visibleContent}
-                                    items={items}
-                                    pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
-                                    filter={
-                                      <TextFilter
-                                        {...filterProps}
-                                        countText={getMatchesCountText(filteredItemsCount)}
-                                        filteringAriaLabel="Filter instances"
-                                      />
-                                    }
-                                    preferences={
-                                      <CollectionPreferences
-                                        {...collectionPreferencesProps}
-                                        preferences={preferences}
-                                        onConfirm={({ detail }) => setPreferences(detail)}
-                                      />
-                                    }
-                                    onSelectionChange={({ detail }) => {
-                                        setSelectedItems(detail.selectedItems);
-                                        setsplitPanelShow(true);
-                                        }
-                                      }
-                                    selectedItems={selectedItems}
-                                    resizableColumns
-                                    stickyHeader
-                                    loadingText="Loading records"
-                                  />
-                              </td>
-                          </tr>
-                      </table>
-                </>
+                      <div style={{"padding" : "1em"}}>
+                          <Flashbar items={versionMessage} />
+                          <Table
+                            {...collectionProps}
+                            selectionType="single"
+                            variant="borderless"
+                            header={
+                              <Header
+                                variant="h2"
+                                counter= {"(" + itemsTable.length + ")"} 
+                                actions={
+                                                  <SpaceBetween
+                                                    direction="horizontal"
+                                                    size="xs"
+                                                  >
+                                                    <Button variant="primary" disabled={selectedItems[0].identifier === "" ? true : false} onClick={handleClickLogin}>Connect</Button>
+                                                    <Button variant="primary" onClick={() => { gatherTablesDetails(); }}>Refresh</Button>
+                                                  </SpaceBetween>
+                                          }
+                              >
+                                DynamoDB Tables
+                              </Header>
+                            }
+                            columnDefinitions={columnsTable}
+                            visibleColumns={preferences.visibleContent}
+                            items={items}
+                            pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
+                            filter={
+                              <TextFilter
+                                {...filterProps}
+                                countText={getMatchesCountText(filteredItemsCount)}
+                                filteringAriaLabel="Filter instances"
+                              />
+                            }
+                            preferences={
+                              <CollectionPreferences
+                                {...collectionPreferencesProps}
+                                preferences={preferences}
+                                onConfirm={({ detail }) => setPreferences(detail)}
+                              />
+                            }
+                            onSelectionChange={({ detail }) => {
+                                setSelectedItems(detail.selectedItems);
+                                setsplitPanelShow(true);
+                                }
+                              }
+                            selectedItems={selectedItems}
+                            resizableColumns
+                            stickyHeader
+                            loadingText="Loading records"
+                          />
+                  </div>
                 
             }
           />

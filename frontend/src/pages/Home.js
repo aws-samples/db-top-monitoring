@@ -85,7 +85,6 @@ function Home() {
           content={
               <>
               <Flashbar items={versionMessage} />
-              
               <ContentLayout 
                     header = {
                             <Header variant="h2"

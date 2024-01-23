@@ -13,6 +13,7 @@ import CustomHeader from "../components/HeaderApp";
 import AppLayout from "@cloudscape-design/components/app-layout";
 import SideNavigation from '@cloudscape-design/components/side-navigation';
 
+import Alert from "@cloudscape-design/components/alert";
 import Flashbar from "@cloudscape-design/components/flashbar";
 import { StatusIndicator } from '@cloudscape-design/components';
 import Modal from "@cloudscape-design/components/modal";
@@ -54,6 +55,9 @@ function Login() {
     //-- Application Version
     const [versionMessage, setVersionMessage] = useState([]);
   
+    //-- Auth Message
+    const [messageVisible, setMessageVisible] = useState(false);
+    
     //-- Variable for Split Panels
     const [splitPanelShow,setsplitPanelShow] = useState(false);
     const [selectedItems,setSelectedItems] = useState([{ identifier: "" }]);
@@ -188,8 +192,8 @@ function Login() {
     
                 }
                 else {
-                 
-
+                      
+                      setMessageVisible(true);
                 }
                   
 
@@ -364,7 +368,14 @@ function Login() {
                                                 direction="horizontal"
                                                 size="xs"
                                               >
-                                                <Button variant="primary" disabled={selectedItems[0].identifier === "" ? true : false} onClick={() => {setModalConnectVisible(true);}}>Connect</Button>
+                                                <Button variant="primary" disabled={ (selectedItems[0].identifier === "" ? true : false) } 
+                                                onClick={() => {
+                                                    setModalConnectVisible(true);
+                                                    setMessageVisible(false);
+                                                }}
+                                                >
+                                                  Connect
+                                                </Button>
                                               </SpaceBetween>
                                       }
                                       
@@ -438,105 +449,109 @@ function Login() {
             }
             contentType="table"
             content={
-                <>
-                      <table style={{"width":"100%","padding" : "1em"}}>
-                          <tr>  
-                              <td style={{"width":"100%"}}>  
-                                  <Flashbar items={versionMessage} />
-                                  <Table
-                                    {...collectionProps}
-                                    selectionType="single"
-                                    variant="borderless"
-                                    header={
-                                      <Header
-                                        variant="h2"
-                                        counter= {"(" + itemsTable.length + ")"} 
-                                        actions={
-                                                          <SpaceBetween
-                                                            direction="horizontal"
-                                                            size="xs"
-                                                          >
-                                                            <Button variant="primary" disabled={selectedItems[0].identifier === "" ? true : false} onClick={() => {setModalConnectVisible(true);}}>Connect</Button>
-                                                            <Button variant="primary" onClick={() => {gatherInstances();}}>Refresh</Button>
-                                                          </SpaceBetween>
-                                                  }
-                                      >
-                                        DocumentDB Clusters
-                                      </Header>
-                                    }
-                                    columnDefinitions={columnsTable}
-                                    visibleColumns={preferences.visibleContent}
-                                    items={items}
-                                    pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
-                                    filter={
-                                      <TextFilter
-                                        {...filterProps}
-                                        countText={getMatchesCountText(filteredItemsCount)}
-                                        filteringAriaLabel="Filter instances"
-                                      />
-                                    }
-                                    preferences={
-                                      <CollectionPreferences
-                                        {...collectionPreferencesProps}
-                                        preferences={preferences}
-                                        onConfirm={({ detail }) => setPreferences(detail)}
-                                      />
-                                    }
-                                    onSelectionChange={({ detail }) => {
-                                        setSelectedItems(detail.selectedItems);
-                                        setsplitPanelShow(true);
-                                        }
-                                      }
-                                    selectedItems={selectedItems}
-                                    resizableColumns
-                                    stickyHeader
-                                    loadingText="Loading records"
-                                  />
+                      <div style={{"padding" : "1em"}}>
+                          <Flashbar items={versionMessage} />
+                          <Table
+                            {...collectionProps}
+                            selectionType="single"
+                            variant="borderless"
+                            header={
+                              <Header
+                                variant="h2"
+                                counter= {"(" + itemsTable.length + ")"} 
+                                actions={
+                                                  <SpaceBetween
+                                                    direction="horizontal"
+                                                    size="xs"
+                                                  >
+                                                    <Button variant="primary" disabled={selectedItems[0].identifier === "" ? true : false} onClick={() => {setModalConnectVisible(true);}}>Connect</Button>
+                                                    <Button variant="primary" onClick={() => {gatherInstances();}}>Refresh</Button>
+                                                  </SpaceBetween>
+                                          }
+                              >
+                                DocumentDB Clusters
+                              </Header>
+                            }
+                            columnDefinitions={columnsTable}
+                            visibleColumns={preferences.visibleContent}
+                            items={items}
+                            pagination={<Pagination {...paginationProps} ariaLabels={paginationLabels} />}
+                            filter={
+                              <TextFilter
+                                {...filterProps}
+                                countText={getMatchesCountText(filteredItemsCount)}
+                                filteringAriaLabel="Filter instances"
+                              />
+                            }
+                            preferences={
+                              <CollectionPreferences
+                                {...collectionPreferencesProps}
+                                preferences={preferences}
+                                onConfirm={({ detail }) => setPreferences(detail)}
+                              />
+                            }
+                            onSelectionChange={({ detail }) => {
+                                setSelectedItems(detail.selectedItems);
+                                setsplitPanelShow(true);
+                                }
+                              }
+                            selectedItems={selectedItems}
+                            resizableColumns
+                            stickyHeader
+                            loadingText="Loading records"
+                          />
+                          
+                            <Modal
+                                onDismiss={() => {
+                                    setModalConnectVisible(false);
+                                    setMessageVisible(false);
                                   
-                                    <Modal
-                                        onDismiss={() => setModalConnectVisible(false)}
-                                        visible={modalConnectVisible}
-                                        closeAriaLabel="Close modal"
-                                        footer={
-                                          <Box float="right">
-                                            <SpaceBetween direction="horizontal" size="xs">
-                                              <Button variant="primary" onClick={() => setModalConnectVisible(false)}>Cancel</Button>
-                                              <Button variant="primary" onClick={handleClickLogin}>Connect</Button>
-                                            </SpaceBetween>
-                                          </Box>
-                                        }
-                                        header={
-                                              <Header
-                                                  variant="h3"
-                                              >  
-                                                     {"Instance : " + selectedItems[0].identifier }
-                                              </Header> 
-                                          
-                                        }
+                                }}
+                                visible={modalConnectVisible}
+                                closeAriaLabel="Close modal"
+                                footer={
+                                  <Box float="right">
+                                    <SpaceBetween direction="horizontal" size="xs">
+                                      <Button variant="primary" onClick={() => { setModalConnectVisible(false); setMessageVisible(false);}}>Cancel</Button>
+                                      <Button variant="primary" onClick={handleClickLogin}>Connect</Button>
+                                    </SpaceBetween>
+                                  </Box>
+                                }
+                                header={
+                                      <Header
+                                          variant="h3"
+                                      >  
+                                             {"Instance : " + selectedItems[0].identifier }
+                                      </Header> 
+                                  
+                                }
+                              >
+                                    <FormField
+                                      label="Username"
+                                    >
+                                      <Input value={txtUser} onChange={event =>settxtUser(event.detail.value)}
+                                      
+                                      />
+                                    </FormField>
+                                    
+                                    <FormField
+                                      label="Password"
+                                    >
+                                      <Input value={txtPassword} onChange={event =>settxtPassword(event.detail.value)} onKeyDown={handleKeyDowntxtLogin}
+                                             type="password"
+                                      />
+                                    </FormField>
+                                    <br/>
+                                    <Alert
+                                        statusIconAriaLabel="Error"
+                                        type="error"
+                                        visible={messageVisible}
                                       >
-                                            <FormField
-                                              label="Username"
-                                            >
-                                              <Input value={txtUser} onChange={event =>settxtUser(event.detail.value)}
-                                              
-                                              />
-                                            </FormField>
-                                            
-                                            <FormField
-                                              label="Password"
-                                            >
-                                              <Input value={txtPassword} onChange={event =>settxtPassword(event.detail.value)} onKeyDown={handleKeyDowntxtLogin}
-                                                     type="password"
-                                              />
-                                            </FormField>
-                                            
-                                            
-                                      </Modal>
-                                  </td>
-                              </tr>
-                          </table>
-                  
-                </>
+                                        Authentication process failed, review access credentials.
+                                      </Alert>
+                                    
+                              </Modal>
+                    </div>
                 
             }
           />

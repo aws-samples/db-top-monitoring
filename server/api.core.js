@@ -1,8 +1,7 @@
 //-- Import Class Objects
-const {classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster, classDynamoDB } = require('./class.engine.js');
-const {classAWS} = require('./class.aws.js');
+const { classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster, classDynamoDB } = require('./class.engine.js');
+const { classAWS } = require('./class.aws.js');
 const AWSObject = new classAWS();
-
 
 //-- Engine Objects
 var elasticacheObjectContainer = [];
@@ -47,21 +46,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(csrfProtection);
-
-
-
-// AWS Variables
-var AWS = require('aws-sdk');
-AWS.config.update({region: configData.aws_region});
-
-var cloudwatch = new AWS.CloudWatch({region: configData.aws_region, apiVersion: '2010-08-01'});
-var cloudwatchlogs = new AWS.CloudWatchLogs();
-var docDB = new AWS.DocDB({region: configData.aws_region});
-var docDBElastic = new AWS.DocDBElastic({region: configData.aws_region});
-var elasticache = new AWS.ElastiCache();
-var memorydb = new AWS.MemoryDB();
-var sts = new AWS.STS();
-var dynamodb = new AWS.DynamoDB();
 
 
 // Security Variables
@@ -283,11 +267,14 @@ async function authenticationElasticacheRedisCluster(req, res) {
     var params = req.body.params;
     var session_id=uuid.v4();
     var token = generateToken({ session_id: session_id});
-            
+    
+    console.log(params);
+    
     try {
             
             var objConnection = new classRedisEngine({...params});
-            if (await objConnection.authentication()==true){
+            var authenticated = await objConnection.authentication();
+            if ( authenticated == true ){
                 res.status(200).send( {"result":"auth1", "session_id": session_id, "session_token": token });
             }
             else {
@@ -2514,8 +2501,8 @@ async function closeConnectionDynamoDB(req, res) {
 //--#################################################################################################### 
 
 
-// AWS : List Instances - by Region
-app.get("/api/aws/aurora/cluster/region/list/", (req,res)=>{
+//--## AWS : List Aurora Clusters
+app.get("/api/aws/aurora/cluster/region/list/", async (req,res)=>{
    
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2524,19 +2511,14 @@ app.get("/api/aws/aurora/cluster/region/list/", (req,res)=>{
         return res.status(511).send({ data: [], message : "Token is invalid"});
 
     // API Call
-    var rds_region = new AWS.RDS({region: configData.aws_region});
-    
     var params = {
         MaxRecords: 100
     };
 
     try {
-        rds_region.describeDBClusters(params, function(err, data) {
-            if (err) 
-                console.log(err, err.stack); // an error occurred
-            res.status(200).send({ csrfToken: req.csrfToken(), data:data });
-        });
-
+        var data = await AWSObject.getRDSClustersAPI(params);
+        res.status(200).send({ csrfToken: req.csrfToken(), data:data });
+        
     } catch(error) {
         console.log(error)
                 
@@ -2546,8 +2528,8 @@ app.get("/api/aws/aurora/cluster/region/list/", (req,res)=>{
 
 
 
-// AWS : List Instances - by Region
-app.get("/api/aws/aurora/cluster/region/endpoints/", (req,res)=>{
+//--## AWS : List RDS Instances
+app.get("/api/aws/aurora/cluster/region/endpoints/", async (req,res)=>{
    
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2556,7 +2538,6 @@ app.get("/api/aws/aurora/cluster/region/endpoints/", (req,res)=>{
         return res.status(511).send({ data: [], message : "Token is invalid"});
 
     // API Call
-    var rds_region = new AWS.RDS({region: configData.aws_region});
     var paramsQuery = req.query;
     
     var params = {
@@ -2570,12 +2551,10 @@ app.get("/api/aws/aurora/cluster/region/endpoints/", (req,res)=>{
     };
 
     try {
-        rds_region.describeDBInstances(params, function(err, data) {
-            if (err) 
-                console.log(err, err.stack); // an error occurred
-            res.status(200).send({ csrfToken: req.csrfToken(), data:data });
-        });
-
+        
+        var data = await AWSObject.getRDSInstancesAPI(params);
+        res.status(200).send({ csrfToken: req.csrfToken(), data:data });
+    
     } catch(error) {
         console.log(error)
                 
@@ -2586,8 +2565,8 @@ app.get("/api/aws/aurora/cluster/region/endpoints/", (req,res)=>{
 
 
 
-// AWS : List Instances - by Region
-app.get("/api/aws/rds/instance/region/list/", (req,res)=>{
+//-## AWS : List RDS Instances
+app.get("/api/aws/rds/instance/region/list/", async (req,res)=>{
    
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2596,19 +2575,15 @@ app.get("/api/aws/rds/instance/region/list/", (req,res)=>{
         return res.status(511).send({ data: [], message : "Token is invalid"});
 
     // API Call
-    var rds_region = new AWS.RDS({region: configData.aws_region});
-    
     var params = {
         MaxRecords: 100
     };
 
     try {
-        rds_region.describeDBInstances(params, function(err, data) {
-            if (err) 
-                console.log(err, err.stack); // an error occurred
-            res.status(200).send({ csrfToken: req.csrfToken(), data:data });
-        });
-
+        
+        var data = await AWSObject.getRDSInstancesAPI(params);
+        res.status(200).send({ csrfToken: req.csrfToken(), data:data });
+        
     } catch(error) {
         console.log(error)
                 
@@ -2621,8 +2596,8 @@ app.get("/api/aws/rds/instance/region/list/", (req,res)=>{
 
 
 
-// AWS : Cloudwatch Information
-app.get("/api/aws/clw/query/", (req,res)=>{
+//--## AWS : Cloudwatch Information
+app.get("/api/aws/clw/query/", async (req,res)=>{
     
     var standardToken = verifyToken(req.headers['x-token']);
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2638,14 +2613,13 @@ app.get("/api/aws/clw/query/", (req,res)=>{
                                 metric.MetricStat.Metric.Dimensions[0]={ Name: metric.MetricStat.Metric.Dimensions[0]['[Name]'], Value: metric.MetricStat.Metric.Dimensions[0]['[Value]']};
                      
             })
-                        
-            cloudwatch.getMetricData(params, function(err, data) {
-                if (err) 
-                    console.log(err, err.stack); // an error occurred
-                res.status(200).send(data);
-            });
             
-    
+            params.StartTime = new Date(params.StartTime);
+            params.EndTime = new Date(params.EndTime);
+        
+            var data = await AWSObject.getCloudwatchMetricDataAPI(params);
+            res.status(200).send(data);
+            
                    
     } catch(error) {
             console.log(error)
@@ -2656,8 +2630,8 @@ app.get("/api/aws/clw/query/", (req,res)=>{
 });
 
 
-// AWS : Cloudwatch Information
-app.get("/api/aws/clw/region/query/", (req,res)=>{
+//--## AWS : Cloudwatch Information
+app.get("/api/aws/clw/region/query/", async (req,res)=>{
 
     var standardToken = verifyToken(req.headers['x-token']);
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2668,21 +2642,19 @@ app.get("/api/aws/clw/region/query/", (req,res)=>{
     try {
         
         var params = req.query;
-        var cloudwatch_region = new AWS.CloudWatch({region: configData.aws_region, apiVersion: '2010-08-01'});
         params.MetricDataQueries.forEach(function(metric) {
                 
-                for(i_dimension=0; i_dimension <  metric.MetricStat.Metric.Dimensions.length; i_dimension++) {
+                for(let i_dimension=0; i_dimension <  metric.MetricStat.Metric.Dimensions.length; i_dimension++) {
                     metric.MetricStat.Metric.Dimensions[i_dimension]={ Name: metric.MetricStat.Metric.Dimensions[i_dimension]['[Name]'], Value: metric.MetricStat.Metric.Dimensions[i_dimension]['[Value]']};
                 }          
         })
-                    
-        cloudwatch_region.getMetricData(params, function(err, data) {
-            if (err) 
-                console.log(err, err.stack); // an error occurred
-            res.status(200).send(data);
-        });
         
-
+        params.StartTime = new Date(params.StartTime);
+        params.EndTime = new Date(params.EndTime);
+        
+        var data = await AWSObject.getCloudwatchMetricDataAPI(params);
+        res.status(200).send(data);
+        
                
     } catch(error) {
         console.log(error)
@@ -2693,8 +2665,8 @@ app.get("/api/aws/clw/region/query/", (req,res)=>{
 });
 
 
-// AWS : Cloudwatch Information
-app.get("/api/aws/clw/region/logs/", (req,res)=>{
+//--## AWS : Cloudwatch Information
+app.get("/api/aws/clw/region/logs/", async (req,res)=>{
     
     var standardToken = verifyToken(req.headers['x-token']);
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2708,26 +2680,18 @@ app.get("/api/aws/clw/region/logs/", (req,res)=>{
         var params = req.query;
         var params_logs = {
           logStreamName: params.resource_id,
-          limit: '1',
+          limit: 1,
           logGroupName: 'RDSOSMetrics',
           startFromHead: false
         };
     
-        cloudwatchlogs.getLogEvents(params_logs, function(err, data) {
-          if (err) 
-            console.log(err, err.stack); // an error occurred
-          else   {
-              res.status(200).send(data);
-            
-            }
-        });
-            
-            
-
+        var data = await AWSObject.getCloudwatchLogsAPI(params_logs);
+        res.status(200).send(data);
   
 
     } catch(error) {
-        console.log(error)
+        console.log(error);
+        return[];
                 
     }
 
@@ -2736,8 +2700,8 @@ app.get("/api/aws/clw/region/logs/", (req,res)=>{
 
 
 
-// AWS : Elasticache List nodes
-app.get("/api/aws/region/elasticache/cluster/nodes/", (req,res)=>{
+//--## AWS : Elasticache Clusters
+app.get("/api/aws/region/elasticache/cluster/nodes/", async (req,res)=>{
 
     
     // Token Validation
@@ -2753,23 +2717,23 @@ app.get("/api/aws/region/elasticache/cluster/nodes/", (req,res)=>{
       MaxRecords: 100,
       ReplicationGroupId: params.cluster
     };
-    elasticache.describeReplicationGroups(parameter, function(err, data) {
-      if (err) {
-            console.log(err, err.stack); // an error occurred
-            res.status(401).send({ ReplicationGroups : []});
-      }
-      else {
-            res.status(200).send({ csrfToken: req.csrfToken(), ReplicationGroups : data.ReplicationGroups})
-          }
-    });
-
-
+    
+    
+    try {
+        
+        var data = await AWSObject.getElasticacheClustersAPI(parameter);
+        res.status(200).send({ csrfToken: req.csrfToken(), ReplicationGroups : data.ReplicationGroups})
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({ ReplicationGroups : []});
+    }
+    
 });
 
 
-
-// AWS : Elasticache Serverless
-app.get("/api/aws/region/elasticache/serverless/cluster/", (req,res)=>{
+//--## AWS : Elasticache Serverless Clusters
+app.get("/api/aws/region/elasticache/serverless/cluster/", async (req,res)=>{
 
     
     // Token Validation
@@ -2778,29 +2742,27 @@ app.get("/api/aws/region/elasticache/serverless/cluster/", (req,res)=>{
     if (cognitoToken.isValid === false)
         return res.status(511).send({ data: [], message : "Token is invalid"});
 
-
     var parameter = {
       MaxResults: 100
     };
     
-    elasticache.describeServerlessCaches(parameter, function(err, data) {
-      if (err) {
-            console.log(err, err.stack); // an error occurred
-            res.status(401).send({ ServerlessCaches : []});
-      }
-      else {
-            res.status(200).send({ csrfToken: req.csrfToken(), ServerlessCaches : data.ServerlessCaches })
-          }
-    });
-
+    try {
+        
+        var data = await AWSObject.getElasticacheServelesssAPI(parameter);
+        res.status(200).send(data);
+        
+    } catch(error) {
+        console.log(error);
+        return[];
+    }
 
 });
 
 
 
 
-// AWS : MemoryDB List nodes
-app.get("/api/aws/region/memorydb/cluster/nodes/", (req,res)=>{
+//--## AWS : MemoryDB Clusters
+app.get("/api/aws/region/memorydb/cluster/nodes/", async (req,res)=>{
     
     
     // Token Validation
@@ -2816,15 +2778,17 @@ app.get("/api/aws/region/memorydb/cluster/nodes/", (req,res)=>{
       ClusterName: params.cluster,
       ShowShardDetails: true
     };
-    memorydb.describeClusters(parameter, function(err, data) {
-      if (err) {
-            console.log(err, err.stack); // an error occurred
-            res.status(401).send({ Clusters : []});
-      }
-      else {
-            res.status(200).send({ csrfToken: req.csrfToken(), Clusters : data.Clusters})
-          }
-    });
+    
+    
+    try {
+        
+        var data = await AWSObject.getMemoryDBClustersAPI(parameter);
+        res.status(200).send({ csrfToken: req.csrfToken(), Clusters : data.Clusters})
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({ Clusters : []});
+    }
 
 
 });
@@ -2832,9 +2796,10 @@ app.get("/api/aws/region/memorydb/cluster/nodes/", (req,res)=>{
 
 
 
-// AWS : DocumentDB List clusters - by Region
-app.get("/api/aws/docdb/cluster/region/list/", listAWSDocumentDBClusters);
-async function listAWSDocumentDBClusters(req, res) {   
+
+//--## AWS : DocumentDB List clusters - by Region
+app.get("/api/aws/docdb/cluster/region/list/", async (req,res)=>{
+
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
     
@@ -2856,11 +2821,11 @@ async function listAWSDocumentDBClusters(req, res) {
         
         
         
-        var standardClusters = await docDB.describeDBClusters(paramsStandard).promise();
+        var standardClusters = await AWSObject.getDocumentDBClustersAPI(paramsStandard);
         
-        var elasticClusters = await docDBElastic.listClusters(paramsElastic).promise();
+        var elasticClusters = await AWSObject.getDocumentDBClustersElasticAPI(paramsElastic);
         
-        var accountInfo = await sts.getCallerIdentity({}).promise();
+        var accountInfo = await AWSObject.getSTSCallerIdentityAPI({});
         
         res.status(200).send({ csrfToken: req.csrfToken(), standard : standardClusters, elastic : {...elasticClusters, endPoint : accountInfo.Account + "." + configData.aws_region + ".docdb-elastic.amazonaws.com" }  });
         
@@ -2871,12 +2836,11 @@ async function listAWSDocumentDBClusters(req, res) {
                 
     }
 
-}
+});
 
 
-// AWS : DynamoDB list tables
-app.get("/api/aws/region/dynamodb/tables/", (req,res)=>{
-    
+//--## AWS : DynamoDB list tables
+app.get("/api/aws/region/dynamodb/tables/", async (req,res)=>{
     
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2886,15 +2850,17 @@ app.get("/api/aws/region/dynamodb/tables/", (req,res)=>{
 
 
     var parameter = {};
-    dynamodb.listTables(parameter, function(err, data) {
-      if (err) {
-            console.log(err, err.stack); // an error occurred
-            res.status(401).send({ tables : []});
-      }
-      else {
-            res.status(200).send({ csrfToken: req.csrfToken(), tables : data.TableNames })
-          }
-    });
+    
+    try {
+        
+        var data = await AWSObject.getDynamoDBTablesAPI(parameter);
+        res.status(200).send({ csrfToken: req.csrfToken(), tables : data.TableNames })
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({ tables : []});
+    }
+    
 
 
 });
@@ -2902,8 +2868,7 @@ app.get("/api/aws/region/dynamodb/tables/", (req,res)=>{
 
 
 // AWS : DynamoDB list tables with details
-app.get("/api/aws/region/dynamodb/tables/details/", getDynamoDBTableDetails);
-async function getDynamoDBTableDetails(req, res) {
+app.get("/api/aws/region/dynamodb/tables/details/", async (req,res)=>{
 
     // Token Validation
     var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
@@ -2913,7 +2878,7 @@ async function getDynamoDBTableDetails(req, res) {
 
     try {
         
-        var tableList = await dynamodb.listTables({}).promise();
+        var tableList = await AWSObject.getDynamoDBTablesAPI({});
         var tableResult = [];
         if (tableList.TableNames.length > 0) {
             
@@ -2933,7 +2898,7 @@ async function getDynamoDBTableDetails(req, res) {
     }
     
 
-};
+});
 
 
 //--#################################################################################################### 

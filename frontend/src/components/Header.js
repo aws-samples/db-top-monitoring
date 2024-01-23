@@ -1,6 +1,7 @@
 import TopNavigation from '@cloudscape-design/components/top-navigation';
 import { configuration } from '../pages/Configs';
 import { applyMode,  Mode } from '@cloudscape-design/global-styles';
+import { databaseEngineTitle } from './Functions';
 
 export default function App({sessionInformation,onClickMenu, onClickDisconnect, titleItem = ""}) {
 
@@ -16,7 +17,6 @@ export default function App({sessionInformation,onClickMenu, onClickDisconnect, 
     };
     
     const handleClickMenu = ({detail}) => {
-            console.log(detail);
             
             switch (detail.id) {
               
@@ -68,7 +68,7 @@ export default function App({sessionInformation,onClickMenu, onClickDisconnect, 
                 i18nStrings={i18nStrings}
                 identity={{
                   href: '#',
-                  title: configuration['apps-settings']['application-title'] + " Solution " 
+                  title: configuration['apps-settings']['application-title'] + " Solution - " + databaseEngineTitle(sessionInformation["rds_engine"]) 
                 }}
                 
                 utilities={[

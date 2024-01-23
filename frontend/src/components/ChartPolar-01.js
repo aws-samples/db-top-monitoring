@@ -21,6 +21,9 @@ const ChartComponent = memo(({ series, labels, title, height="350px", width="100
       
                 },
               },
+              theme: {
+                palette : "palette2"
+              },
               labels: labels,
               stroke: {
                 colors: ['#fff']

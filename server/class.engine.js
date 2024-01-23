@@ -1126,15 +1126,13 @@ class classRedisEngine {
                                         
                                 });
                                 
-                                
-                                
-                                var command = await this.#connection.ping();
-                                this.isAuthenticated = true;
+                                this.isAuthenticated = await this.isConnected();
                                 
                                
                 }
                 catch(err){
                     this.#objLog.write("#openConnection","err",err);
+                    this.isAuthenticated = false;
                 }
             
 
@@ -1168,11 +1166,8 @@ class classRedisEngine {
         async isConnected() { 
                 try {
                         
-                            var command = await this.#connection.ping();
-                            if (command =="PONG")
-                                return true;
-                            else
-                                return false;
+                            var command = await this.#connection.info();
+                            return true;
                 }
                 catch(err){
                     return false;
@@ -1189,7 +1184,8 @@ class classRedisEngine {
                     return this.isAuthenticated;
             }
             catch(err){
-                return this.isAuthenticated;;
+                this.isAuthenticated = false;
+                return this.isAuthenticated;
             }
         }
         
