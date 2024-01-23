@@ -10,10 +10,10 @@ export const configuration =
         "refresh-interval-documentdb-sessions": 5*1000,
         "refresh-interval-aurora-pgs-sessions": 10*1000,
         "refresh-interval-dynamodb": 5*1000,
-        "items-per-page-aurora-pgs": 10,
-        "items-per-page-documentdb": 10,
+        "items-per-page-aurora": 16,
+        "items-per-page-documentdb": 64,
         "api_url": "",
-        "release" : "0.1.2",
+        "release" : "0.1.3",
         "release-enforcement" : false,
         "application-title": "DBTop Monitoring",
         "version-code-url" : "https://version.code.ds.wwcs.aws.dev/",
@@ -37,14 +37,22 @@ export const SideMainLayoutHeader = { text: 'Database Services', href: '#/' };
 export const SideMainLayoutMenu = [
     { type: "link", text: "Home", href: "/" },
     {
-      text: 'Resources',
+      text: 'Relational Engines',
       type: 'section',
       defaultExpanded: true,
       items: [
         { type: 'link', text: 'RDS Instances', href: '/rds/instances/' },
         { type: 'link', text: 'Aurora Clusters', href: '/clusters/aurora/'},
-        { type: 'link', text: 'MemoryDB Clusters', href: '/clusters/memorydb/'},
+      ],
+    },
+    { type: "divider" },
+    {
+      text: 'NON-Relational Engines',
+      type: 'section',
+      defaultExpanded: true,
+      items: [
         { type: 'link', text: 'ElastiCache Clusters', href: '/clusters/elasticache/' },
+        { type: 'link', text: 'MemoryDB Clusters', href: '/clusters/memorydb/'},
         { type: 'link', text: 'DocumentDB Clusters', href: '/clusters/documentdb/'},
         { type: 'link', text: 'DynamoDB Tables', href: '/tables/dynamodb/'},
       ],

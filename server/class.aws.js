@@ -5,19 +5,29 @@ var configData = JSON.parse(fs.readFileSync('./aws-exports.json'));
 //-- AWS Catalog Resources
 var nodeCatalog = JSON.parse(fs.readFileSync('./aws-node-types.json'));
 
+//--## AWS Libraries
+const { ElastiCacheClient, DescribeServerlessCachesCommand, DescribeReplicationGroupsCommand } = require("@aws-sdk/client-elasticache");
+const { MemoryDBClient, DescribeClustersCommand } = require("@aws-sdk/client-memorydb");
+const { RDSClient, DescribeDBClustersCommand, DescribeDBInstancesCommand } = require("@aws-sdk/client-rds");
+const { DocDBClient, /*DescribeDBClustersCommand*/ } = require("@aws-sdk/client-docdb"); 
+const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
+const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-cloudwatch-logs");
+const { DocDBElasticClient, GetClusterCommand } = require("@aws-sdk/client-docdb-elastic");
+const { DynamoDBClient, DescribeTableCommand, ListTablesCommand } = require("@aws-sdk/client-dynamodb");
+const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts"); 
 
-// AWS Variables
-var AWS = require('aws-sdk');
-AWS.config.update({region: configData.aws_region});
 
-var elasticache = new AWS.ElastiCache();
-var memorydb = new AWS.MemoryDB();
-var rds = new AWS.RDS({region: configData.aws_region});
-var documentDB = new AWS.DocDB({region: configData.aws_region});
-var cloudwatch = new AWS.CloudWatch({region: configData.aws_region, apiVersion: '2010-08-01'});
-var cloudwatchlogs = new AWS.CloudWatchLogs({region: configData.aws_region });
-var docdbelastic = new AWS.DocDBElastic({region: configData.aws_region });
-var dynamodb = new AWS.DynamoDB({region: configData.aws_region });
+//--## AWS Variables
+const awsConfig = {region: configData.aws_region}
+const elasticache = new ElastiCacheClient(awsConfig);
+const memorydb = new MemoryDBClient(awsConfig);
+const rds = new RDSClient(awsConfig);
+const documentDB = new DocDBClient(awsConfig);
+const cloudwatch = new CloudWatchClient(awsConfig);
+const cloudwatchlogs = new CloudWatchLogsClient(awsConfig);
+const docdbelastic = new DocDBElasticClient(awsConfig);
+const dynamodb = new DynamoDBClient(awsConfig);
+const sts = new STSClient(awsConfig);
 
 
 class classAWS {
@@ -34,11 +44,12 @@ class classAWS {
 
                  var parameter = {
                           MaxRecords: 100,
-                          ReplicationGroupId: params.clusterId
+                          ReplicationGroupId: clusterId
                         };
                         
-                var data = await elasticache.describeReplicationGroups(parameter).promise();
-                
+                const command = new DescribeReplicationGroupsCommand(parameter);
+                var data = await elasticache.send(command);
+                        
                 return data;
 
         }
@@ -51,12 +62,16 @@ class classAWS {
                 try
                     {
                         
+                        
+
+
                         var parameter = {
                                   MaxRecords: 100,
                                   ReplicationGroupId: clusterId
                                 };
-                                
-                        var clusterInfo = await elasticache.describeReplicationGroups(parameter).promise();
+                        
+                        const command = new DescribeReplicationGroupsCommand(parameter);
+                        var clusterInfo = await elasticache.send(command);
                         
                         if (clusterInfo.ReplicationGroups.length> 0) 
                             result = { status : clusterInfo.ReplicationGroups[0]["Status"], size : clusterInfo.ReplicationGroups[0]["CacheNodeType"], totalShards : clusterInfo.ReplicationGroups[0]["NodeGroups"].length, totalNodes : clusterInfo.ReplicationGroups[0]["MemberClusters"].length };
@@ -86,8 +101,9 @@ class classAWS {
                               ReplicationGroupId: clusterId
                             };
                             
-                    var data = await elasticache.describeReplicationGroups(parameter).promise();
-                    
+                    const command = new DescribeReplicationGroupsCommand(parameter);
+                    var data= await elasticache.send(command);
+                        
                     if (data.ReplicationGroups.length> 0) {
                                     
                                     var rg = data.ReplicationGroups[0];
@@ -184,8 +200,9 @@ class classAWS {
                       ServerlessCacheName : clusterId
                     };
                     
-                    var clusterData = await elasticache.describeServerlessCaches(params).promise();;
-
+                    const command = new DescribeServerlessCachesCommand(params);
+                    var clusterData = await elasticache.send(command);
+                        
                     clusterInfo.status = clusterData.ServerlessCaches[0]['Status'];
                     clusterInfo.ecpu = clusterData.ServerlessCaches[0]['CacheUsageLimits']['ECPUPerSecond']['Maximum'];
                     clusterInfo.storage = clusterData.ServerlessCaches[0]['CacheUsageLimits']['DataStorage']['Maximum'];
@@ -211,8 +228,9 @@ class classAWS {
                           ShowShardDetails: true
                     };
                     
-                    var data = await memorydb.describeClusters(parameter).promise();
-                    
+                    const command = new DescribeClustersCommand(parameter);
+                    const data = await memorydb.send(command);
+
                     return data;
             
         }
@@ -233,7 +251,8 @@ class classAWS {
                               ShowShardDetails: true
                         };
             
-                        var clusterInfo = await memorydb.describeClusters(parameter).promise();
+                        const command = new DescribeClustersCommand(parameter);
+                        const clusterInfo = await memorydb.send(command);
                         
                         if (clusterInfo.Clusters.length> 0) {
                             
@@ -268,7 +287,8 @@ class classAWS {
                               ShowShardDetails: true
                         };
                         
-                        var data = await memorydb.describeClusters(parameter).promise();
+                        const command = new DescribeClustersCommand(parameter);
+                        const data = await memorydb.send(command);
                         
                         if (data.Clusters.length> 0) {
                                         
@@ -332,7 +352,8 @@ class classAWS {
                         MaxRecords: 100
                     };
         
-                    var data = await documentDB.describeDBClusters(parameterCluster).promise();
+                    const command = new DescribeDBClustersCommand(parameterCluster);
+                    const data = await documentDB.send(command);
                     return data;
             
         }
@@ -353,7 +374,8 @@ class classAWS {
                             MaxRecords: 100
                         };
             
-                        var clusterData = await documentDB.describeDBClusters(parameterCluster).promise();
+                        const command = new DescribeDBClustersCommand(parameterCluster);
+                        const clusterData = await documentDB.send(command);
                         result = { status : clusterData['DBClusters'][0]['Status'], size : "", totalNodes : clusterData['DBClusters'][0]['DBClusterMembers'].length };
                         
                 }
@@ -381,7 +403,9 @@ class classAWS {
                         MaxRecords: 100
                     };
         
-                    var clusterData = await documentDB.describeDBClusters(parameterCluster).promise();
+                    var command = new DescribeDBClustersCommand(parameterCluster);
+                    const clusterData = await documentDB.send(command);
+                    
                     var roleType = [];
                     
                     clusterData['DBClusters'][0]['DBClusterMembers'].forEach(function(instance) {
@@ -401,8 +425,9 @@ class classAWS {
                     };
         
                     
-                    var Instancedata = await rds.describeDBInstances(parameterInstances).promise();
-                    
+                    command = new DescribeDBInstancesCommand(parameterInstances);
+                    const Instancedata = await rds.send(command);
+
                     
                     if (Instancedata.DBInstances.length > 0) {
                             
@@ -456,7 +481,9 @@ class classAWS {
                         MaxRecords: 100
                     };
         
-                    var data = await rds.describeDBClusters(parameterCluster).promise();
+                    var command = new DescribeDBClustersCommand(parameterCluster);
+                    const data = await rds.send(command);
+                    
                     return data;
             
         }
@@ -477,7 +504,9 @@ class classAWS {
                             MaxRecords: 100
                         };
             
-                        var clusterData = await rds.describeDBClusters(parameterCluster).promise();
+                        var command = new DescribeDBClustersCommand(parameterCluster);
+                        const clusterData = await rds.send(command);
+                    
                         result = { status : clusterData['DBClusters'][0]['Status'], size : "", totalNodes : clusterData['DBClusters'][0]['DBClusterMembers'].length };
                         
                     
@@ -504,7 +533,9 @@ class classAWS {
                         MaxRecords: 100
                     };
         
-                    var clusterData = await rds.describeDBClusters(parameterCluster).promise();
+                    var command = new DescribeDBClustersCommand(parameterCluster);
+                    const clusterData = await rds.send(command);
+                        
                     var roleType = [];
                     
                     clusterData['DBClusters'][0]['DBClusterMembers'].forEach(function(instance) {
@@ -524,7 +555,8 @@ class classAWS {
                     };
         
                     
-                    var Instancedata = await rds.describeDBInstances(parameterInstances).promise();
+                    command = new DescribeDBInstancesCommand(parameterInstances);
+                    const Instancedata = await rds.send(command);
                     
                     if (Instancedata.DBInstances.length > 0) {
                             
@@ -582,7 +614,8 @@ class classAWS {
                     };
         
                     
-                    var Instancedata = await rds.describeDBInstances(parameterInstances).promise();
+                    var command = new DescribeDBInstancesCommand(parameterInstances);
+                    const Instancedata = await rds.send(command);
                     
                     if (Instancedata.DBInstances.length > 0) {
                             
@@ -627,8 +660,8 @@ class classAWS {
                         DBInstanceIdentifier : instanceId
                     };
                     
-                    var instanceData = await rds.describeDBInstances(parameterInstances).promise();
-                    
+                    var command = new DescribeDBInstancesCommand(parameterInstances);
+                    const instanceData = await rds.send(command);
                     
                     if (instanceData.DBInstances.length > 0) {
                             instanceInfo.status = instanceData.DBInstances[0]['DBInstanceStatus'];
@@ -662,7 +695,9 @@ class classAWS {
                     var params = {
                       clusterArn: clusterId
                     };
-                    var clusterData = await docdbelastic.getCluster(params).promise();;
+        
+                    const command = new GetClusterCommand(params);
+                    const clusterData = await docdbelastic.send(command);
 
                     clusterInfo.status = clusterData.cluster.status;
                     clusterInfo.shardCapacity = clusterData.cluster.shardCapacity;
@@ -689,7 +724,9 @@ class classAWS {
                     var params = {
                       TableName: tableName
                     };
-                    var tableData = await dynamodb.describeTable(params).promise();
+        
+                    const command = new DescribeTableCommand(params);
+                    const tableData = await dynamodb.send(command);
 
                     tableInfo.status = String(tableData.Table.TableStatus).toLowerCase();
                     tableInfo.size = tableData.Table.TableSizeBytes;
@@ -711,12 +748,13 @@ class classAWS {
                         tableInfo.wcu = tableData.Table.ProvisionedThroughput.WriteCapacityUnits;
                     }
                     
-                    tableData.Table.GlobalSecondaryIndexes.forEach(function(index) {
-                                    
-                        tableInfo.indexList.push(index['IndexName']);
+                   if (Array.isArray(tableData?.Table?.GlobalSecondaryIndexes)){
+                        tableData.Table.GlobalSecondaryIndexes.forEach(function(index) {
                                         
-                    });
-                    
+                            tableInfo.indexList.push(index['IndexName']);
+                                            
+                        });
+                   }
                     
                 }
                 catch (error) {
@@ -737,7 +775,9 @@ class classAWS {
                     var params = {
                       TableName: tableName
                     };
-                    var tableData = await dynamodb.describeTable(params).promise();
+        
+                    const command = new DescribeTableCommand(params);
+                    const tableData = await dynamodb.send(command);
 
                     if (tableData.Table.hasOwnProperty("GlobalSecondaryIndexes")) {
                     
@@ -808,13 +848,14 @@ class classAWS {
                         
                             var params_logs = {
                                 logStreamName: object.resourceId,
-                                limit: '1',
+                                limit: 1,
                                 logGroupName: 'RDSOSMetrics',
                                 startFromHead: false
                             };
                         
-                            var data = await cloudwatchlogs.getLogEvents(params_logs).promise();
-                            
+                            const command = new GetLogEventsCommand(params_logs);
+                            const data = await cloudwatchlogs.send(command);
+
                             var message=JSON.parse(data.events[0].message);
                             
                             nodeMetrics.cpu = parseFloat(message.cpuUtilization.total);
@@ -880,7 +921,8 @@ class classAWS {
                                 "EndTime": d_end_time
                             };
                            
-                            var data = await cloudwatch.getMetricData(queryClw).promise();
+                            const command = new GetMetricDataCommand(queryClw);
+                            const data = await cloudwatch.send(command);
                             
                             data.MetricDataResults.forEach(function(item) {
                                     
@@ -996,12 +1038,14 @@ class classAWS {
                         
                             var params_logs = {
                                 logStreamName: object.resourceId,
-                                limit: '1',
+                                limit: 1,
                                 logGroupName: 'RDSOSMetrics',
                                 startFromHead: false
                             };
                         
-                            var data = await cloudwatchlogs.getLogEvents(params_logs).promise();
+                            const command = new GetLogEventsCommand(params_logs);
+                            const data = await cloudwatchlogs.send(command);
+                            
                             var message = JSON.parse(data.events[0].message);
                             
                             switch (object.engineType){
@@ -1064,8 +1108,6 @@ class classAWS {
                                 
                             }
                             
-                            //nodeMetrics.tps = parseFloat(message.diskIO[0].tps) + parseFloat(message.diskIO[1].tps);
-                            //nodeMetrics.ioqueue = parseFloat(message.diskIO[0].avgQueueLen) + parseFloat(message.diskIO[1].avgQueueLen);
                             nodeProcessList = message.processList;
                             timestamp = message.timestamp;
                             
@@ -1141,8 +1183,9 @@ class classAWS {
                         "EndTime": d_end_time
                     };
                    
-                    var data = await cloudwatch.getMetricData(queryClw).promise();
-                    
+                    const command = new GetMetricDataCommand(queryClw);
+                    const data = await cloudwatch.send(command);
+                            
                     data.MetricDataResults.forEach(function(item) {
                         if (item.Values.length > 0 ) {
                             result[item.Label].value = item.Values[0];
@@ -1206,8 +1249,9 @@ class classAWS {
                         "EndTime": d_end_time
                     };
                    
-                    var data = await cloudwatch.getMetricData(queryClw).promise();
-                    
+                    const command = new GetMetricDataCommand(queryClw);
+                    const data = await cloudwatch.send(command);
+                            
                     return data.MetricDataResults;
                     
             }
@@ -1247,7 +1291,9 @@ class classAWS {
                     "EndTime": d_end_time
                 };
                 
-                var data = await cloudwatch.getMetricData(queryClw).promise();
+                const command = new GetMetricDataCommand(queryClw);
+                const data = await cloudwatch.send(command);
+                            
                 return data.MetricDataResults;
             }
             catch(err){
@@ -1257,11 +1303,224 @@ class classAWS {
             
         }
         
+        
+        //------#################
+        //------################# API CORE
+        //------#################
+        
+        
+        
+        //------################# CloudWatch
+        
+        async getCloudwatchMetricDataAPI(parameter){
+             
+            try {
+            
+                const command = new GetMetricDataCommand(parameter);
+                const data = await cloudwatch.send(command);
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
 
+        }
+        
+        async getCloudwatchLogsAPI(parameter){
+             
+            try {
+            
+                const command = new GetLogEventsCommand(parameter);
+                const data = await cloudwatchlogs.send(command);
+                
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+
+
+        //------################# RDS
+        
+        async getRDSClustersAPI(parameter){
+             
+            try {
+            
+                const command = new DescribeDBClustersCommand(parameter);
+                const data = await rds.send(command);
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+        async getRDSInstancesAPI(parameter){
+             
+            try {
+            
+                const command = new DescribeDBInstancesCommand(parameter);
+                const data = await rds.send(command);
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+        //------################# ELASTICACACHE
+        
+        
+        async getElasticacheClustersAPI(parameter){
+
+            try {
+                
+                const command = new DescribeReplicationGroupsCommand(parameter);
+                var data = await elasticache.send(command);
+                        
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+                
+        async getElasticacheServelesssAPI(parameter){
+
+            try {
+                
+                const command = new DescribeServerlessCachesCommand(parameter);
+                var data = await elasticache.send(command);
+                        
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+        //------################# DOCUMENTDB
+        
+        async getDocumentDBClustersAPI(parameter){
+
+            try {
+                
+                const command = new DescribeDBClustersCommand(parameter);
+                const data = await documentDB.send(command);
+                        
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+        async getDocumentDBClustersElasticAPI(parameter){
+
+            try {
+                
+                const command = new GetClusterCommand(parameter);
+                const data = await docdbelastic.send(command);
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+        //------################# STS
+        
+        async getSTSCallerIdentityAPI(parameter){
+
+            try {
+                
+                const command = new GetCallerIdentityCommand(parameter);
+                const data = await sts.send(command);
+
+                return data;
+                
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        
+        //------################# MEMORYDB
+        
+        async getMemoryDBClustersAPI(parameter){
+
+            try {
+                
+                const command = new DescribeClustersCommand(parameter);
+                const data = await memorydb.send(command);
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
+        //------################# DYNAMODB
+        
+        async getDynamoDBTablesAPI(parameter){
+
+            try {
+                
+                const command = new ListTablesCommand(parameter);
+                const data = await dynamodb.send(command);
+                return data;
+                
+            }
+            catch(err){
+                console.log(err);
+                return [];
+            }
+
+        }
+        
         
 }
 
-module.exports = {classAWS};
+
+module.exports = { classAWS };
 
 
 

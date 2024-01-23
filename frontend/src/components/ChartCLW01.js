@@ -34,11 +34,15 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                  }
 
               },
+              theme: {
+                palette : "palette2"
+              },
               markers: {
-                  size: 4,
-                  strokeColors: '#29313e',
-                  radius: 1,
-                  strokeWidth: 0.2,
+                  size: 5,
+                  radius: 0,
+                  strokeWidth: 2,
+                  fillOpacity: 1,
+                  shape: "circle",
               },
               dataLabels: {
                 enabled: false
@@ -122,9 +126,15 @@ const ChartCLW = memo(({title,subtitle,height,color,namespace,dimension_name,dim
                 "StartTime": d_start_time,
                 "EndTime": d_end_time
             };
-              
+             
+             var customConfig = {
+                headers: {
+                'Content-Type': 'application/json'
+                }
+            };
             return Axios.get(`${configuration["apps-settings"]["api_url"]}/api/aws/clw/region/query/`,{
-             params: queryclw
+            headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+             params : queryclw
             }).then((data)=>{
             
                     var currentData = [];

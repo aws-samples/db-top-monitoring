@@ -42,6 +42,29 @@ export function customFormatNumber(value,decimalLength) {
 }
 
 
+export function customFormatNumberLong(value,decimalLength) {
+        if(value == 0) return '0';
+        if(value < 1000) return parseFloat(value).toFixed(decimalLength);
+        
+        var k = 1000,
+        sizes = ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y'],
+        i = Math.floor(Math.log(value) / Math.log(k));
+        return parseFloat((value / Math.pow(k, i)).toFixed(decimalLength)) + ' ' + sizes[i];
+}
+
+
+export function customFormatNumberShort(value,decimalLength) {
+        if (value < 100 && decimalLength == 0 )
+          decimalLength=2;
+       
+        if (value==0)
+          decimalLength=0;
+
+        return value.toLocaleString('en-US', {minimumFractionDigits:decimalLength, maximumFractionDigits:decimalLength}); 
+
+    }
+    
+
 export class classMetric {
 
           
@@ -234,3 +257,57 @@ export function EmptyState({ title, subtitle, action }) {
     </Box>
   );
 }
+
+
+
+
+export function databaseEngineTitle(engine) {
+  
+  var engineTitle = "";
+  switch (engine) {
+    
+    case "docdb-elastic":
+    case "docdb":
+          engineTitle = "Amazon DocumentDB"
+          break;
+    
+    case "dynamodb":
+          engineTitle = "Amazon DynamoDB"
+          break;
+    
+    case "elasticache:redis":
+    case "elasticache:redis-serverless":
+          engineTitle = "Amazon ElastiCache"
+          break;
+    
+    case "memorydb:redis":
+    case "memorydb:redis":
+          engineTitle = "Amazon MemoryDB"
+          break;
+    
+    case "aurora-mysql":
+    case "aurora-postgresql":
+          engineTitle = "Amazon Aurora"
+          break;
+          
+    case "mysql":
+    case "postgres":
+    case "mariadb":
+    case "sqlserver-se":
+    case "sqlserver-ee":
+    case "sqlserver-ex":
+    case "sqlserver-web":
+    case "oracle-ee":
+    case "oracle-ee-cdb":
+    case "oracle-se2":
+    case "oracle-se2-cdb":
+          engineTitle = "Amazon RDS"
+          break;
+    
+    
+    
+    
+  }
+  
+  return engineTitle;
+};

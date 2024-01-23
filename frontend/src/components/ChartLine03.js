@@ -30,6 +30,9 @@ const ChartLine = memo(({series,history, height, width="100%", title, border=2 }
                  }
 
               },
+              theme: {
+                palette : "palette2"
+              },
               markers: {
                   size: 4,
                   radius: 0,

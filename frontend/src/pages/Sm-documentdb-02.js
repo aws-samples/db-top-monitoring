@@ -9,24 +9,25 @@ import ColumnLayout from "@cloudscape-design/components/column-layout";
 import { SplitPanel } from '@cloudscape-design/components';
 import AppLayout from "@cloudscape-design/components/app-layout";
 
+import { createLabelFunction, customFormatNumberLong, customFormatNumber } from '../components/Functions';
+import CustomTable02 from "../components/Table02";
+
 import Flashbar from "@cloudscape-design/components/flashbar";
 import StatusIndicator from "@cloudscape-design/components/status-indicator";
 import Spinner from "@cloudscape-design/components/spinner";
+import Button from "@cloudscape-design/components/button";
 
 import FormField from "@cloudscape-design/components/form-field";
 import TokenGroup from "@cloudscape-design/components/token-group";
 import Select from "@cloudscape-design/components/select";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import Pagination from "@cloudscape-design/components/pagination";
-import Link from "@cloudscape-design/components/link";
 import Header from "@cloudscape-design/components/header";
 import Container from "@cloudscape-design/components/container";
-import DocumentDBNode  from '../components/CompDocumentDBNode02';
 import CompMetric01  from '../components/Metric01';
 import ChartLine02  from '../components/ChartLine02';
 import ChartLine03  from '../components/ChartLine03';
 import CLWChart  from '../components/ChartCLW03';
-import ChartRadialBar01 from '../components/ChartRadialBar01';
 import ChartColumn01 from '../components/ChartColumn01';
 import ChartProgressBar01 from '../components/ChartProgressBar-01';
 import ChartPolar01 from '../components/ChartPolar-01';
@@ -57,9 +58,10 @@ function App() {
     
     //--######## Global Settings
     
-    const [splitPanelShow,setsplitPanelShow] = useState(false);
-    const [metricDetailsIndex,setMetricDetailsIndex] = useState({index : 'cpu', title : 'CPU Usage(%)', timestamp : 0 });
     
+    const [splitPanelShow,setsplitPanelShow] = useState(false);
+    const [splitPanelSize, setSplitPanelSize] = useState(400);
+    var comparativeMode = useRef("single");
     
     //-- Variable for Active Tabs
     const [activeTabId, setActiveTabId] = useState("tab01");
@@ -75,10 +77,7 @@ function App() {
     const cnf_connection_id=parameter_object_values["session_id"];  
     const cnf_identifier=parameter_object_values["rds_id"];  
     const cnf_engine=parameter_object_values["rds_engine"];
-    const cnf_az=parameter_object_values["rds_az"];
-    const cnf_version=parameter_object_values["rds_version"];
     const cnf_resource_id=parameter_object_values["rds_resource_id"];
-    const cnf_nodes=parameter_object_values["rds_nodes"];
     const cnf_endpoint=parameter_object_values["rds_host"];
     const cnf_endpoint_port=parameter_object_values["rds_port"];
     const cnf_username=parameter_object_values["rds_user"];
@@ -105,7 +104,6 @@ function App() {
   
     //-- Variable for Shard Analytics
     const [shardAnalytics,setShardAnalytics] = useState({ series : [], labels : [], max :  0, min : 0, avg : 0, count : 0 });
-    const [shardAnalyticsDetails,setShardAnalyticsDetails] = useState({ name : "", data : [] });
     const [selectedMetricAnalytics,setSelectedMetricAnalytics] = useState({
                                                                             label: "PrimaryInstanceCPUUtilization",
                                                                             value: "PrimaryInstanceCPUUtilization"
@@ -137,6 +135,51 @@ function App() {
     const shardItemsSelectedList = useRef([]);
     const shardItemsSelectedData = useRef([]);
   
+    //-- Variable for Comparative Mode
+    const [selectedMetricComparation,setSelectedMetricComparation] = useState({label: "OpsTotalCount",value: "OpsTotalCount"});
+    const metricNameComparation = useRef({ name : "OpsTotalCount", descriptions : "OpsTotalCount", unit : "Count/sec" });
+    
+
+    const metricsComparation = [
+                                {
+                                  label: "Shard metrics",
+                                  options: [
+                                            { label : "PrimaryInstanceCPUUtilization", value : "PrimaryInstanceCPUUtilization", factor : 60, descriptions : "PrimaryInstanceCPUUtilization", unit : "Percentage" },
+                                            { label : "PrimaryInstanceFreeableMemory", value : "PrimaryInstanceFreeableMemory", factor : 60, descriptions : "PrimaryInstanceFreeableMemory", unit : "Bytes" },
+                                            { label : "ReadThroughput", value : "ReadThroughput", factor : 60, descriptions : "ReadThroughput", unit : "Bytes" },
+                                            { label : "ReplicaInstanceCPUUtilization", value : "ReplicaInstanceCPUUtilization", factor : 60, descriptions : "ReplicaInstanceCPUUtilization", unit : "Percentage" },
+                                            { label : "ReplicaInstanceFreeableMemory", value : "ReplicaInstanceFreeableMemory", factor : 60, descriptions : "ReplicaInstanceFreeableMemory", unit : "Bytes" },
+                                            { label : "VolumeBytesUsed", value : "VolumeBytesUsed", factor : 60, descriptions : "VolumeBytesUsed", unit : "Bytes" },
+                                            { label : "VolumeReadIOPs", value : "VolumeReadIOPs", factor : 60, descriptions : "VolumeReadIOPs", unit : "Count" },
+                                            { label : "VolumeWriteIOPs", value : "VolumeWriteIOPs", factor : 60, descriptions : "VolumeWriteIOPs", unit : "Count" },
+                                            { label : "WriteThroughput", value : "WriteThroughput", factor : 60, descriptions : "WriteThroughput", unit : "Bytes" },
+                                  ]
+                                },
+                                {
+                                  label: "Engine metrics",
+                                  options: [
+                                            { label : "BufferCacheHitRatio", value : "BufferCacheHitRatio", descriptions : "BufferCacheHitRatio", unit : "Count" },
+                                            { label : "DocumentsDeleted", value : "DocumentsDeleted", descriptions : "DocumentsDeleted", unit : "Count/min" },
+                                            { label : "DocumentsInserted", value : "DocumentsInserted", descriptions : "DocumentsInserted", unit : "Count/min" },
+                                            { label : "DocumentsReturned", value : "DocumentsReturned", descriptions : "DocumentsReturned", unit : "CoCount/minunt" },
+                                            { label : "DocumentsUpdated", value : "DocumentsUpdated", descriptions : "DocumentsUpdated", unit : "Count/min" },
+                                            { label : "OpsCommandsCount", value : "OpsCommandsCount", descriptions : "OpsCommandsCount", unit : "Count/sec" },
+                                            { label : "OpsCommandsLatency", value : "OpsCommandsLatency", descriptions : "OpsCommandsLatency", unit : "ms" },
+                                            { label : "OpsGetmoreCount", value : "OpsGetmoreCount", descriptions : "OpsGetmoreCount", unit : "Count/sec" },
+                                            { label : "OpsGetmoreLatency", value : "OpsGetmoreLatency", descriptions : "OpsGetmoreLatency", unit : "ms" },
+                                            { label : "OpsInsertCount", value : "OpsInsertCount", descriptions : "OpsInsertCount", unit : "Count/sec" },
+                                            { label : "OpsInsertLatency", value : "OpsInsertLatency", descriptions : "OpsInsertLatency", unit : "ms" },
+                                            { label : "OpsQueriesCount", value : "OpsQueriesCount", descriptions : "OpsQueriesCount", unit : "Count/sec" },
+                                            { label : "OpsQueriesLatency", value : "OpsQueriesLatency", descriptions : "OpsQueriesLatency", unit : "ms" },
+                                            { label : "OpsRemoveCount", value : "OpsRemoveCount", descriptions : "OpsRemoveCount", unit : "Count/sec" },
+                                            { label : "OpsRemoveLatency", value : "OpsRemoveLatency", descriptions : "OpsRemoveLatency", unit : "ms" },
+                                            { label : "OpsTotalCount", value : "OpsTotalCount", descriptions : "OpsTotalCount", unit : "Count/sec" },
+                                            { label : "OpsTotalLatency", value : "OpsTotalLatency", descriptions : "OpsTotalLatency", unit : "ms" },
+                                            { label : "OpsUpdateCount", value : "OpsUpdateCount", descriptions : "OpsUpdateCount", unit : "Count/sec" },
+                                            { label : "OpsUpdateLatency", value : "OpsUpdateLatency", descriptions : "OpsUpdateLatency", unit : "ms" },
+                                            ]
+                                },
+                            ];
   
     //-- Cluster Stats
     const nodeList = useRef("");
@@ -170,9 +213,7 @@ function App() {
                                             VolumeReadIOPs: 0,
                                             VolumeWriteIOPs: 0,
                                             WriteThroughput: 0,
-                                            history: [],
                                             lastUpdate: "-",
-                                            nodes: [],
                                             shardCapacity: "-",
                                             shardCount: "-",
                                             status: "-",
@@ -211,9 +252,28 @@ function App() {
                                 
                 });
                 
-    const [shardStats,setShardStats] = useState([]);
                 
     
+    //-- Instances
+    const instanceIdActive = useRef(0);
+    const columnsTableShards = [
+                  {id: 'shardId',header: 'ShardId',cell: item => ( <> <StatusIndicator type={'success'}> {item.shardId} </StatusIndicator> </> ),ariaLabel: createLabelFunction('shardId'),sortingField: 'shardId',},
+                  {id: 'OpsTotalCount',header: 'OpsTotal',cell: item => customFormatNumberLong(item['OpsTotalCount'],0),ariaLabel: createLabelFunction('OpsTotalCount'),sortingField: 'OpsTotalCount',},
+                  {id: 'OpsInsertCount',header: 'OpsInsert',cell: item => customFormatNumberLong(item['OpsInsertCount'],0),ariaLabel: createLabelFunction('OpsInsertCount'),sortingField: 'OpsInsertCount',},
+                  {id: 'OpsQueriesCount',header: 'OpsQueries',cell: item => customFormatNumberLong(item['OpsQueriesCount'],0),ariaLabel: createLabelFunction('OpsQueriesCount'),sortingField: 'OpsQueriesCount',},
+                  {id: 'OpsRemoveCount',header: 'OpsRemove',cell: item => customFormatNumberLong(item['OpsRemoveCount'],0),ariaLabel: createLabelFunction('OpsRemoveCount'),sortingField: 'OpsRemoveCount',},
+                  {id: 'OpsUpdateCount',header: 'OpsUpdate',cell: item => customFormatNumberLong(item['OpsUpdateCount'],0),ariaLabel: createLabelFunction('OpsUpdateCount'),sortingField: 'OpsUpdateCount',},
+                  {id: 'PrimaryInstanceCPUUtilization',header: 'CPU(Primary)',cell: item => customFormatNumberLong(item['PrimaryInstanceCPUUtilization'],0),ariaLabel: createLabelFunction('PrimaryInstanceCPUUtilization'),sortingField: 'PrimaryInstanceCPUUtilization',},
+                  {id: 'ReplicaInstanceCPUUtilization',header: 'CPU(Replica)',cell: item => customFormatNumberLong(item['ReplicaInstanceCPUUtilization'],0),ariaLabel: createLabelFunction('ReplicaInstanceCPUUtilization'),sortingField: 'ReplicaInstanceCPUUtilization',},
+                  {id: 'VolumeReadIOPs',header: 'ReadIOPs',cell: item => customFormatNumberLong(item['VolumeReadIOPs'],0),ariaLabel: createLabelFunction('VolumeReadIOPs'),sortingField: 'VolumeReadIOPs',},
+                  {id: 'VolumeWriteIOPs',header: 'WriteIOPs',cell: item => customFormatNumber(item['VolumeWriteIOPs'],0),ariaLabel: createLabelFunction('VolumeWriteIOPs'),sortingField: 'VolumeWriteIOPs',},
+                  {id: 'ReadThroughput',header: 'ReadThroughput',cell: item => customFormatNumber(item['ReadThroughput'],0),ariaLabel: createLabelFunction('ReadThroughput'),sortingField: 'ReadThroughput',},
+                  {id: 'WriteThroughput',header: 'WriteThroughput',cell: item => customFormatNumber(item['WriteThroughput'],0),ariaLabel: createLabelFunction('WriteThroughput'),sortingField: 'WriteThroughput',},
+                  
+                  
+    ];
+    const visibleContentShards = ['shardId', 'OpsTotalCount', 'OpsInsertCount', 'OpsQueriesCount', 'OpsRemoveCount', 'OpsUpdateCount', 'PrimaryInstanceCPUUtilization', 'ReplicaInstanceCPUUtilization', 'VolumeReadIOPs', 'VolumeWriteIOPs', 'ReadThroughput', 'WriteThroughput' ];
+                                            
     
     //-- Function Gather Metrics
     async function openClusterConnection() {
@@ -235,7 +295,6 @@ function App() {
                 
                 nodeList.current = data.data.nodes;
                 clusterList.current = (cnf_resource_id.split("/"))[1] + "|" + cnf_identifier;
-                console.log(nodeList.current);
                 if (data.data.newObject==false) {
                     setConnectionMessage([
                                   {
@@ -276,10 +335,8 @@ function App() {
                                     includeSessions : ( currentTabId.current == "tab02" ? 1 : 0)
                           }
                       }).then((data)=>{
-                          
                        var info = data.data.cluster;
                        setClusterStats({ cluster : {...info} });
-                         
                   })
                   .catch((err) => {
                       console.log('Timeout API Call : /api/documentdb/elastic/cluster/gather/stats/' );
@@ -401,15 +458,6 @@ function App() {
     }
     
 
-    function onClickMetric(metricId,metricTitle) {
-        
-        var timeNow = new Date();
-        
-        setMetricDetailsIndex ({ index : metricId, title : metricTitle, timestamp : timeNow.getTime() });
-        setsplitPanelShow(true);
-                                                      
-    }
-    
     function metricDetailsToColumnsBar(nodes,columnName){
         
         var seriesRaw = [];  
@@ -509,38 +557,378 @@ function App() {
         navigationHide={true}
         splitPanelOpen={splitPanelShow}
         onSplitPanelToggle={() => setsplitPanelShow(false)}
-        splitPanelSize={300}
+        onSplitPanelResize={
+                            ({ detail: { size } }) => {
+                             setSplitPanelSize(size);
+                        }
+        }
+        splitPanelSize={splitPanelSize}
         splitPanel={
-                  <SplitPanel  header={metricDetailsIndex.title} i18nStrings={splitPanelI18nStrings} closeBehavior="hide"
-                    onSplitPanelToggle={({ detail }) => {
+                  <SplitPanel  
+                                header={ 
+                                        ( comparativeMode.current == "single" ?
+                                                (clusterStats['cluster']['nodes'].length > 0 ? "Shard Mode : " + clusterStats['cluster']['nodes'][instanceIdActive.current].shardId : "Shard Mode : " ) :
+                                                "Comparative Mode : " + metricNameComparation.current.descriptions + " ( " + metricNameComparation.current.unit + " )" 
+                                        )
+                      
+                                } 
+                                i18nStrings={splitPanelI18nStrings} 
+                                closeBehavior="hide"
+                                onSplitPanelToggle={({ detail }) => {
                                     
                                     }
                                   }
                   >
                     
-                    { splitPanelShow === true &&
-                    
-                    <table style={{"width":"100%", "padding": "1em"}}>
-                        <tr>  
-                            <td style={{"width":"30%", "padding-left": "1em"}}>  
-                                
-                                <ChartColumn01 
-                                    series={metricDetailsToColumnsBar(clusterStats['cluster']['nodes'],metricDetailsIndex.index)} 
-                                    height="200px" 
-                                />
-                                
-                            </td>
-                            <td style={{"width":"70%", "padding-left": "1em"}}>  
-                                 <ChartLine02 
-                                    series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['cluster']['nodes'],metricDetailsIndex.index))} 
-                                    height="200px" 
-                                  />
-                            </td>
-                        </tr>
-                    </table>
-                     
-                    }
+                    { splitPanelShow === true && comparativeMode.current == "single" &&
                         
+                        <div>  
+                            <table style={{"width":"100%", "padding": "1em"}}>
+                                <tr>  
+                                    <td valign="top" style={{ "width":"100%"}}>
+                                            
+                                            <table style={{"width":"100%"}}>
+                                                <tr>  
+                                                    <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                            <CompMetric01 
+                                                                value={ (clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsTotalCount'] ) || 0}
+                                                                title={"Operations/sec"}
+                                                                precision={0}
+                                                                format={3}
+                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                fontSizeValue={"24px"}
+                                                            />
+                                                    </td>
+                                                    <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                            <CompMetric01 
+                                                                value={ (clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsInsertCount'] + clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsUpdateCount'] + clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsRemoveCount']  ) || 0}
+                                                                title={"WriteOps/sec"}
+                                                                precision={0}
+                                                                format={3}
+                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                fontSizeValue={"16px"}
+                                                            />
+                                                            <br/>        
+                                                            <br/> 
+                                                            <CompMetric01 
+                                                                value={ ( clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsQueriesCount']  ) || 0 }
+                                                                title={"ReadOps/sec"}
+                                                                precision={0}
+                                                                format={3}
+                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                fontSizeValue={"16px"}
+                                                            />
+                                                    </td>
+                                                    <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                            <ChartProgressBar01 
+                                                                value={ ( clusterStats['cluster']['nodes'][instanceIdActive.current]['PrimaryInstanceCPUUtilization']  ) || 0 }
+                                                                valueSufix={"%"}
+                                                                title={"CPU Primary"}
+                                                                precision={0}
+                                                                format={1}
+                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                fontSizeValue={"16px"}
+                                                            />
+                                                            <br />
+                                                            <br />
+                                                            <ChartProgressBar01 
+                                                                value={ ( clusterStats['cluster']['nodes'][instanceIdActive.current]['ReplicaInstanceCPUUtilization']  ) || 0 }
+                                                                valueSufix={"%"}
+                                                                title={"CPU Replica"}
+                                                                precision={0}
+                                                                format={1}
+                                                                fontColorValue={configuration.colors.fonts.metric100}
+                                                                fontSizeValue={"16px"}
+                                                            />
+                                                         
+                                                    </td>
+                                                    <td style={{"width":"22%", "padding-left": "1em"}}>  
+                                                         <ChartLine02 series={JSON.stringify([
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['PrimaryInstanceCPUUtilization'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['ReplicaInstanceCPUUtilization']
+                                                                            ])} 
+                                                                        title={"CPU Usage(%)"} height="200px" 
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"22%", "padding-left": "1em"}}>  
+                                                         <ChartLine02 series={JSON.stringify([
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['VolumeReadIOPs'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['VolumeWriteIOPs']
+                                                                                
+                                                                            ])} 
+                                                                        title={"IOPS"} height="200px" 
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"22%", "padding-left": "1em"}}>  
+                                                         <ChartLine02 series={JSON.stringify([
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['ReadThroughput'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['WriteThroughput']
+                                                                            ])} 
+                                                                        title={"I/O Throughput"} height="200px" 
+                                                        />  
+                                                    </td>
+                                              
+                                                </tr>
+                                                
+                                            </table>  
+                                            <br />
+                                            <br />
+                                            <br />
+                                            <table style={{"width":"100%"}}>
+                                                <tr> 
+                                                    <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsInsertCount']  || 0}
+                                                            title={"opsInsert/sec"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsQueriesCount'] || 0}
+                                                            title={"opsSelect/sec"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsRemoveCount']  || 0}
+                                                            title={"opsDelete/sec"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsUpdateCount'] || 0}
+                                                            title={"opsUpdate/sec"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsGetmoreCount'] || 0}
+                                                            title={"opsGetmore/sec"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsCommandsCount'] || 0}
+                                                            title={"opsCommand/sec"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['VolumeReadIOPs'] || 0}
+                                                            title={"VolumeReadIOPs"}
+                                                            precision={0}
+                                                            format={1}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['VolumeWriteIOPs'] || 0}
+                                                            title={"VolumeWriteIOPs"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <br/>
+                                            <br/>
+                                            <table style={{"width":"100%"}}>
+                                                <tr> 
+                                                    <td style={{"width":"10%", "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsInsertLatency']  || 0}
+                                                            title={"opsInsertLatency(us)"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsQueriesLatency'] || 0}
+                                                            title={"opsSelectLatency(us)"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsRemoveLatency']  || 0}
+                                                            title={"opsDeleteLatency(us)"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsUpdateLatency'] || 0}
+                                                            title={"opsUpdateLatency(us)"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsGetmoreLatency'] || 0}
+                                                            title={"opsGetmoreLatency(us)"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['OpsCommandsLatency'] || 0}
+                                                            title={"opsCommandLatency(us)"}
+                                                            precision={0}
+                                                            format={3}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['WriteThroughput'] || 0}
+                                                            title={"WriteThroughput"}
+                                                            precision={0}
+                                                            format={2}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                    <td style={{"width":"10%", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>  
+                                                        <CompMetric01 
+                                                            value={ clusterStats['cluster']['nodes'][instanceIdActive.current]['ReadThroughput'] || 0}
+                                                            title={"ReadThroughput"}
+                                                            precision={0}
+                                                            format={2}
+                                                            fontColorValue={configuration.colors.fonts.metric100}
+                                                            fontSizeValue={"16px"}
+                                                        />
+                                                    </td>
+                                                </tr>
+                                            </table> 
+                                            <br/>
+                                            <br/>
+                                            <br />
+                                            <br />
+                                            
+                                            <table style={{"width":"100%"}}>
+                                                  <tr>  
+                                                    <td style={{"width":"30%", "padding-left": "1em"}}>  
+                                                         <ChartLine02 series={JSON.stringify([
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsTotalCount']
+                                                                            ])} 
+                                                                        title={"Operations/sec"} height="200px" 
+                                                        />  
+                                                    </td>
+                                                    <td style={{"width":"35%", "padding-left": "1em"}}>  
+                                                         <ChartLine02 series={JSON.stringify([
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsInsertCount'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsQueriesCount'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsRemoveCount'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsUpdateCount'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsGetmoreCount'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsCommandsCount']
+                                                                            ])} 
+                                                                        title={"Operations/sec"} height="200px" 
+                                                        />  
+                                                    </td>
+                                                    <td style={{"width":"35%", "padding-left": "1em"}}>  
+                                                         <ChartLine02 series={JSON.stringify([
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsInsertLatency'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsQueriesLatency'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsRemoveLatency'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsUpdateLatency'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsGetmoreLatency'],
+                                                                                clusterStats['cluster']['nodes'][instanceIdActive.current]['history']['OpsCommandsLatency']
+                                                                                
+                                                                            ])} 
+                                                                        title={"Latency(us)"} height="200px" 
+                                                        />
+                                                    </td>
+                                                  </tr>
+                                            </table>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>  
+                    } 
+                    
+                    { splitPanelShow === true && comparativeMode.current == "multi" &&
+                    <div>  
+                        <table style={{"width":"100%", "padding": "1em"}}>
+                            <tr>  
+                                <td valign="top" style={{ "width":"30%", "padding": "1em"}}>
+                                    <FormField
+                                          description="Select a metric to compare shard performance."
+                                          label="Performance Metric"
+                                        >
+                                        
+                                            
+                                            <Select
+                                                  selectedOption={selectedMetricComparation}
+                                                  onChange={({ detail }) => {
+                                                         metricNameComparation.current = { name : detail.selectedOption.value, descriptions : detail.selectedOption.descriptions, unit : detail.selectedOption.unit };
+                                                         setSelectedMetricComparation(detail.selectedOption);
+                                                         gatherClusterStats();
+                                                  }
+                                                  }
+                                                  options={metricsComparation}
+                                                  filteringType="auto"
+                                            />
+                                    </FormField>
+                                    <ChartColumn01 
+                                        series={metricDetailsToColumnsBar(clusterStats['cluster']['nodes'],metricNameComparation.current.name)} 
+                                        height="200px" 
+                                    />
+                                </td>
+                                <td style={{"width":"70%", "padding-left": "1em"}}>  
+                                    <ChartLine02 
+                                        series={JSON.stringify(metricDetailsToColumnsLine(clusterStats['cluster']['nodes'],metricNameComparation.current.name))} 
+                                        height="250px" 
+                                      />
+                                </td>
+                            </tr>
+                        </table>
+                    </div>  
+                    }
                         
                   </SplitPanel>
         }
@@ -897,87 +1285,60 @@ function App() {
                                                                     </td>
                                                                   </tr>
                                                             </table>
-                                                             
                                                             
-                                                        </Container>
-                                                        <br/>
-                                                        
-                                                        <Container
-                                                        
-                                                                    header={
-                                                                                <Header
-                                                                                  variant="h2"
-                                                                                  actions={
-                                                                                        <Pagination
-                                                                                              currentPageIndex={currentPageIndex}
-                                                                                              onChange={({ detail }) => {
-                                                                                                        setCurrentPageIndex(detail.currentPageIndex);
-                                                                                                        pageId.current = detail.currentPageIndex;
-                                                                                                        gatherClusterStats();
-                                                                                                }
-                                                                                              }
-                                                                                              pagesCount={ totalPages } 
-                                                                                        />
-                                                                                      
-                                                                                  }
-                                                                                >
-                                                                                  Shards
-                                                                                </Header>
-                                                                            }
-                                                        
-                                                        >
-                                                            <table style={{"width":"100%" }}>
-                                                                        <tr>
-                                                                            <td style={{ "width":"9%", "text-align":"left","padding-left":"1em", "font-size": "12px", "font-weight": "600"}}>
-                                                                                ShardId
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() =>  onClickMetric('OpsTotalCount','Operations/sec')}>Operations/sec</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('OpsInsertCount','OpsInsert/sec')}>OpsInsert/sec</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('OpsQueriesCount','OpsSelect/sec')}>OpsSelect/sec</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('OpsRemoveCount','OpsDelete/sec')}>OpsDelete/sec</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('OpsUpdateCount','OpsUpdate/sec')}>OpsUpdate/sec</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('PrimaryInstanceCPUUtilization','CPU(%)-Primary')}>CPU(%)-Primary</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('ReplicaInstanceCPUUtilization','CPU(%)-Replica')}>CPU(%)-Replica</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                    <Link fontSize="body-s" onFollow={() => onClickMetric('VolumeReadIOPs','Read IOPS')}>Read IOPS</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('VolumeWriteIOPs','Write IOPS')}>Write IOPS</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('ReadThroughput','ReadThroughput')}>ReadThroughput</Link>
-                                                                            </td>
-                                                                            <td style={{ "width":"9%", "text-align":"center","font-size": "12px", "font-weight": "600", "border-left": "2px solid " + configuration.colors.lines.separator100, "padding-left": "1em"}}>
-                                                                                <Link fontSize="body-s" onFollow={() => onClickMetric('WriteThroughput','WriteThroughput')}>WriteThroughput</Link>
-                                                                            </td>
-                                                                        </tr>
-                                                                            {clusterStats.cluster.nodes.map((item,key) => (
-                                                                                                     <DocumentDBNode
-                                                                                                        nodeStats={item}
-                                                                                                    />
-                                                                            ))}
-                                                                        
-                                                            </table>
-                                                
                                                         </Container>
                                                     </td>
                                                 </tr>
                                             </table>  
-                                                
+                                            
+                                            <div style={{"padding":"1em"}}>
+                                                <CustomTable02
+                                                        columnsTable={columnsTableShards}
+                                                        visibleContent={visibleContentShards}
+                                                        dataset={clusterStats.cluster.nodes}
+                                                        title={"Shards"}
+                                                        description={""}
+                                                        pageSize={20}
+                                                        onSelectionItem={( item ) => {
+                                                            console.log(item);
+                                                            var iPosition = 0;
+                                                            for (let iNode = 0 ; iNode < clusterStats.cluster.nodes.length; iNode ++){
+                                                                if(clusterStats.cluster.nodes[iNode].shardId == item[0].shardId)
+                                                                    iPosition = iNode;
+                                                            }
+                                                            instanceIdActive.current = iPosition;
+                                                            comparativeMode.current = "single";
+                                                            setsplitPanelShow(true);
+                                                            gatherClusterStats();
+                                                          }
+                                                        }
+                                                        extendedTableProperties = {
+                                                            { onSortingChange1 : "borderless" }
+                                                            
+                                                        }
+                                                        tableActions={
+                                                                    <SpaceBetween
+                                                                      direction="horizontal"
+                                                                      size="xs"
+                                                                    >
+                                                                      <Button variant="primary" 
+                                                                              onClick={() => {
+                                                                                console.log("Comparative");
+                                                                                comparativeMode.current = "multi";
+                                                                                setsplitPanelShow(true);
+                                                                                gatherClusterStats();
+                                                                                }
+                                                                              }
+                                                                      >
+                                                                        Compartive Mode
+                                                                      </Button>
+                                                                    </SpaceBetween>
+                                                        }
+                                                        
+                                                        
+                                                        
+                                                />
+                                            </div>
                                            
                                           </>
                                           
