@@ -1,9 +1,14 @@
+#!/bin/bash
 #Verify code version
 version="$(curl https://version.code.ds.wwcs.aws.dev/?codeId=dbtop'&'moduleId=deploy)"
 
 #Install Software Packages
-sudo yum install -y openssl
-sudo yum install -y nginx
+# Bug : https://github.com/amazonlinux/amazon-linux-2023/issues/397
+while true; do
+    echo "Trying to install rpm packages ..."
+    sudo yum install -y openssl nginx && break
+done
+
 
 #Create Certificates
 sudo mkdir /etc/nginx/ssl/

@@ -101,7 +101,7 @@ Parameters:
   ApplicationUpdateUrl:
       Type: String
       Description: URL
-      Default: https://raw.githubusercontent.com/snunezcode/db-top-monitoring/master/frontend/public/version.json
+      Default: https://version.code.ds.wwcs.aws.dev/
       
   ApplicationUpdateEnabled:
       Type: String
@@ -272,7 +272,7 @@ Resources:
                     
                     echo '{ "aws_region": "${AWS::Region}","aws_cognito_user_pool_id": "${CognitoUserPool}","aws_cognito_user_pool_web_client_id": "${CognitoUserPoolClient}","aws_api_port": 3000,  "aws_token_expiration":24, "aws_application_update_url" : "${ApplicationUpdateUrl}", "aws_application_update_enabled" : "${ApplicationUpdateEnabled}" }' > /aws/apps/conf/aws-exports.json
                     cd /aws/apps
-                    sudo -u ec2-user sh conf/setup.sh
+                    sudo -u ec2-user sh conf/setup.sh 2>&1 | tee /tmp/setup.log
        
             Tags: 
               - 
