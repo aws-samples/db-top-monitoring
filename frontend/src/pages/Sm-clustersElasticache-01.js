@@ -345,21 +345,28 @@ function Login() {
                                       else
                                           authMode = "modeNonAuth";
                                       
-                                      rdsItems.push({
-                                                    identifier : item['ServerlessCacheName'],
-                                                    status : item['Status'] ,
-                                                    size : (parseFloat(item['CacheUsageLimits']['ECPUPerSecond']['Maximum'])).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}) +  " (ECPUs)",
-                                                    engine : "elasticache:redis-serverless" ,
-                                                    shards : "-",
-                                                    nodes: "-",
-                                                    mode: "-",
-                                                    endpoint: item['Endpoint']['Address'],
-                                                    port : item['Endpoint']['Port'],
-                                                    multiaz : "true",
-                                                    ssl : "required",
-                                                    auth : authMode,
-                                                    authmode : authMode,
-                                      });
+                                      if ( item['Engine'] == "redis") {
+                                          rdsItems.push({
+                                                        identifier : item['ServerlessCacheName'],
+                                                        status : item['Status'] ,
+                                                        size : (
+                                                                  ( parseFloat(item['CacheUsageLimits']?.['ECPUPerSecond']?.['Maximum']) || 0 ) > 0 ?
+                                                                  ( parseFloat(item['CacheUsageLimits']?.['ECPUPerSecond']?.['Maximum']) || 0 ).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}) +  " (ECPUs)"
+                                                                  :
+                                                                  ""
+                                                               ),
+                                                        engine : "elasticache:" + item['Engine'] + "-serverless" ,
+                                                        shards : "-",
+                                                        nodes: "-",
+                                                        mode: "-",
+                                                        endpoint: item['Endpoint']['Address'],
+                                                        port : item['Endpoint']['Port'],
+                                                        multiaz : "true",
+                                                        ssl : "required",
+                                                        auth : authMode,
+                                                        authmode : authMode,
+                                          });
+                                      }
                                       
                                       
                                 }
