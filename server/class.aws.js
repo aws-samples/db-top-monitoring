@@ -12,7 +12,7 @@ const { RDSClient, DescribeDBClustersCommand, DescribeDBInstancesCommand } = req
 const { DocDBClient, /*DescribeDBClustersCommand*/ } = require("@aws-sdk/client-docdb"); 
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-cloudwatch-logs");
-const { DocDBElasticClient, GetClusterCommand } = require("@aws-sdk/client-docdb-elastic");
+const { DocDBElasticClient, GetClusterCommand, ListClustersCommand  } = require("@aws-sdk/client-docdb-elastic");
 const { DynamoDBClient, DescribeTableCommand, ListTablesCommand } = require("@aws-sdk/client-dynamodb");
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts"); 
 
@@ -1446,7 +1446,7 @@ class classAWS {
 
             try {
                 
-                const command = new GetClusterCommand(parameter);
+                const command = new ListClustersCommand(parameter);
                 const data = await docdbelastic.send(command);
                 return data;
                 
