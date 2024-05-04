@@ -53,7 +53,6 @@ DBTop Monitoring Solution currently supports following database engines:
     - [Amazon ElastiCache for Redis](https://aws.amazon.com/elasticache/redis/)
     - [Amazon MemoryDB for Redis](https://aws.amazon.com/memorydb/)
 - [Amazon DocumentDB (with MongoDB compatibility)](https://aws.amazon.com/documentdb/)
-- [Amazon DynamoDB](https://aws.amazon.com/dynamodb/)
 
 Additional expanded support coming later to :
 
@@ -206,6 +205,7 @@ Follow the step-by-step instructions to configure and deploy the DBTop Monitorin
 > **Note:** Because you are connecting to a site with a self-signed, untrusted host certificate, your browser may display a series of security warnings. 
 Override the warnings and proceed to the site. To prevent site visitors from encountering warning screens, you must obtain a trusted, 
 CA-signed certificate that not only encrypts, but also publicly authenticates you as the owner of the site.
+
 
 
 ## Security

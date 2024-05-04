@@ -2390,9 +2390,10 @@ class classPostgresqlEngine {
         //-- Open Connection
         async #openConnection() { 
             
-            
                 this.isAuthenticated = false;
                 var params = this.objectConnection;
+                
+                console.log(params);
             
                 try {
                     
@@ -3519,8 +3520,10 @@ class classElasticacheServerlessCluster {
                         'NetworkBytesIn' : { factor : 60 },
                         'NetworkBytesOut' : { factor : 60 },
                         'NewConnections' : { factor : 60 },
-                        'SuccessfulReadRequestLatency' : { factor : 0.000001 },
-                        'SuccessfulWriteRequestLatency' : { factor : 0.000001 },
+                        //'SuccessfulReadRequestLatency' : { factor : 0.000001 },
+                        //'SuccessfulWriteRequestLatency' : { factor : 0.000001 },
+                        'SuccessfulReadRequestLatency' : { factor : 1 },
+                        'SuccessfulWriteRequestLatency' : { factor : 1 },
                         'ThrottledCmds' : { factor : 60 },
                         'TotalCmdsCount' : { factor : 60 },
                         //--Commands

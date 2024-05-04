@@ -15,6 +15,7 @@ const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-c
 const { DocDBElasticClient, GetClusterCommand, ListClustersCommand  } = require("@aws-sdk/client-docdb-elastic");
 const { DynamoDBClient, DescribeTableCommand, ListTablesCommand } = require("@aws-sdk/client-dynamodb");
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts"); 
+const {  BedrockRuntimeClient,  InvokeModelCommand,} = require("@aws-sdk/client-bedrock-runtime");
 
 
 //--## AWS Variables
@@ -28,7 +29,7 @@ const cloudwatchlogs = new CloudWatchLogsClient(awsConfig);
 const docdbelastic = new DocDBElasticClient(awsConfig);
 const dynamodb = new DynamoDBClient(awsConfig);
 const sts = new STSClient(awsConfig);
-
+const bedrock = new BedrockRuntimeClient(awsConfig);
 
 class classAWS {
 
@@ -816,7 +817,153 @@ class classAWS {
         }
         
         
+        // Get global DynamoDBMetrics
+        async getDynamoDBTablesMetrics(){
+            
+            //-- Queries
+            var queries = [
+                            {
+                                id : "ConsumedReadCapacityUnits",
+                                sql : `SELECT SUM(ConsumedReadCapacityUnits) FROM SCHEMA(\"AWS/DynamoDB\",TableName)`, 
+                                period : 60, 
+                                interval : 60,
+                            },
+                            {
+                                id : "ConsumedWriteCapacityUnits",
+                                sql : `SELECT SUM(ConsumedWriteCapacityUnits) FROM SCHEMA(\"AWS/DynamoDB\",TableName)`, 
+                                period : 60, 
+                                interval : 60,
+                            },
+                            {
+                                id : "ReadThrottledRequests",
+                                sql : `SELECT SUM(ThrottledRequests) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation) WHERE Operation!='PutItem' AND Operation!='UpdateItem' AND Operation!='DeleteItem' AND Operation!='BatchWriteItem'`, 
+                                period : 60, 
+                                interval : 60,
+                            },
+                            {
+                                id : "WriteThrottledRequests",
+                                sql : `SELECT SUM(ThrottledRequests) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation) WHERE Operation!='GetItem' AND Operation!='Scan' AND Operation!='Query' AND Operation!='BatchGetItem'`, 
+                                period : 60, 
+                                interval : 60,
+                            },
+                            {
+                                id : "MaxSuccessfulRequestLatency",
+                                sql : `SELECT MAX(SuccessfulRequestLatency) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation)`, 
+                                period : 1, 
+                                interval : 60,
+                            },
+                            {
+                                id : "AverageSuccessfulRequestLatency",
+                                sql : `SELECT AVG(SuccessfulRequestLatency) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation)`, 
+                                period : 1, 
+                                interval : 60,
+                            },
+            ];
+            
+
+            var result = {};
+            for (let i = 0; i < queries.length ; i++){
+            
+                var query = queries[i];
+                var metrics = await this.getGenericMetricsInsight({ 
+                                                            sqlQuery : query.sql, 
+                                                            period : query.period, 
+                                                            interval : query.interval
+                });
+                metrics.forEach( item => {
+                        try {
+                                
+                                const values = item['Timestamps'].map((record,iPosition) => [record,item['Values'][iPosition]/ query.period ]); 
+                                result = { ...result, [query.id] : { value : ( values.length > 1 ? values[1][1] : 0 ), history : values } };
+                                
+                                
+                        }
+                        catch(err){
+                            
+                        }
+                });
+            }
+            
+            return result;
+            
+                
+        }
         
+        
+        // Get global DynamoDB metrics per table
+        async getDynamoDBTablesMetricsSingle(){
+            
+            //-- Queries
+            var queries = [
+                            {
+                                id : "ConsumedReadCapacityUnits",
+                                sql : `SELECT SUM(ConsumedReadCapacityUnits) FROM SCHEMA(\"AWS/DynamoDB\",TableName) group by TableName`, 
+                                period : 60, 
+                                interval : 3,
+                            },
+                            {
+                                id : "ConsumedWriteCapacityUnits",
+                                sql : `SELECT SUM(ConsumedWriteCapacityUnits) FROM SCHEMA(\"AWS/DynamoDB\",TableName) group by TableName`, 
+                                period : 60, 
+                                interval : 3,
+                            },
+                            {
+                                id : "ReadThrottledRequests",
+                                sql : `SELECT SUM(ThrottledRequests) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation) WHERE Operation!='PutItem' AND Operation!='UpdateItem' AND Operation!='DeleteItem' AND Operation!='BatchWriteItem' group by TableName`, 
+                                period : 60, 
+                                interval : 3,
+                            },
+                            {
+                                id : "WriteThrottledRequests",
+                                sql : `SELECT SUM(ThrottledRequests) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation) WHERE Operation!='GetItem' AND Operation!='Scan' AND Operation!='Query' AND Operation!='BatchGetItem' group by TableName`, 
+                                period : 60, 
+                                interval : 3,
+                            },
+                            {
+                                id : "MaxSuccessfulRequestLatency",
+                                sql : `SELECT MAX(SuccessfulRequestLatency) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation) group by TableName`, 
+                                period : 1, 
+                                interval : 3,
+                            },
+                            {
+                                id : "AverageSuccessfulRequestLatency",
+                                sql : `SELECT AVG(SuccessfulRequestLatency) FROM SCHEMA(\"AWS/DynamoDB\",TableName,Operation)  group by TableName`, 
+                                period : 1, 
+                                interval : 3,
+                            },
+            ];
+            
+            var tables = [];
+            for (let i = 0; i < queries.length ; i++){
+            
+                var query = queries[i];
+                var metrics = await this.getGenericMetricsInsight({ 
+                                                            sqlQuery : query.sql, 
+                                                            period : query.period, 
+                                                            interval : query.interval
+                });
+                
+                metrics.forEach( item => {
+                        try {
+                                
+                                tables[item.Label] = {...tables[item.Label], [query.id] : ( item['Values'].length > 1 ? item['Values'][1]/query.period : 0 ) };
+                        }
+                        catch(err){
+                            console.log(err);
+                        }
+                });
+            }
+            var result = [];
+            for (let name of Object.keys(tables)) {
+                        result.push({
+                            tableName : name, 
+                            ...tables[name]
+                        });
+            };
+                
+            return result;
+                
+        }
         
         //------#################
         //------################# OS
@@ -1503,7 +1650,6 @@ class classAWS {
         async getDynamoDBTablesAPI(parameter){
 
             try {
-                
                 const command = new ListTablesCommand(parameter);
                 const data = await dynamodb.send(command);
                 return data;
@@ -1520,7 +1666,24 @@ class classAWS {
 }
 
 
-module.exports = { classAWS };
+//--############# CLASS : classGenerativeIA                                                                                               
+class classGenerativeIA {
+
+        properties;
+        constructor(object) { 
+            this.properties = {...object};
+        }
+          
+          
+        //-- Open Connection
+        async getRecommendations(object) { 
+            
+            return {};
+        }
+}
+
+
+module.exports = { classAWS, classGenerativeIA };
 
 
 
