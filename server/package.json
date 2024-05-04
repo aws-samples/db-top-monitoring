@@ -11,6 +11,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.556.0",
     "@aws-sdk/client-cloudwatch": "^3.496.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.496.0",
     "@aws-sdk/client-docdb": "^3.496.0",

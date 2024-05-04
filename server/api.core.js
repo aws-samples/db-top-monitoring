@@ -1,7 +1,12 @@
 //-- Import Class Objects
 const { classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster, classDynamoDB } = require('./class.engine.js');
 const { classAWS } = require('./class.aws.js');
+const { classGenerativeIA } = require('./class.aws.js');
+const { classApplicationUpdate } = require('./class.update.js');
 const AWSObject = new classAWS();
+const GenerativeIAObject = new classGenerativeIA();
+
+
 
 //-- Engine Objects
 var elasticacheObjectContainer = [];
@@ -14,6 +19,10 @@ var rdsPostgresqlObjectContainer = [];
 var rdsSqlserverObjectContainer = [];
 var rdsOracleObjectContainer = [];
 var dynamoDBObjectContainer = [];
+
+
+//-- Application Update
+var applicationUpdate = new classApplicationUpdate();
 
 //-- Scheduler
 const schedule = require('node-schedule');
@@ -2890,7 +2899,22 @@ app.get("/api/aws/region/dynamodb/tables/details/", async (req,res)=>{
                                   
         }
         
-        res.status(200).send({ csrfToken: req.csrfToken(), tables : tableResult })
+        var tableMetrics = await AWSObject.getDynamoDBTablesMetrics();
+        var tableMetricsSingle = await AWSObject.getDynamoDBTablesMetricsSingle();
+        
+        let tableMerged = [];
+
+        for(let i=0; i<tableResult.length; i++) {
+          tableMerged.push({
+           ...tableResult[i], 
+           ...(tableMetricsSingle.find((itmInner) => itmInner.tableName === tableResult[i].tableName))}
+          );
+        }
+        
+        //console.log(tableMetricsSingle);
+        //console.log(tableMerged);
+        
+        res.status(200).send({ csrfToken: req.csrfToken(), tables : tableMerged, metrics : tableMetrics });
         
     }
     catch{
@@ -2899,6 +2923,229 @@ app.get("/api/aws/region/dynamodb/tables/details/", async (req,res)=>{
     
 
 });
+
+
+
+//--++ API : GENERAL : Application Update - Start
+app.get("/api/aws/application/update/start", async (req, res) => {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+ 
+    
+    try {
+        
+        applicationUpdate.startUpdate();
+        res.status(200).send({ csrfToken: req.csrfToken(), status : "started"} )
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({});
+    }
+    
+});
+
+
+//--++ API : GENERAL : Application Update - Status
+app.get("/api/aws/application/update/status", async (req, res) => {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+ 
+    try {
+        
+        res.status(200).send({ csrfToken: req.csrfToken(), status : applicationUpdate.status, messages : applicationUpdate.getUpdateLog() } )
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({});
+    }
+    
+});
+
+
+
+//--++ API : GENERAL : List Connections
+app.get("/api/aws/engines/connections/list", async (req, res) => {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+        
+    
+    var connections = [];
+    
+    try {
+        
+                
+            //-- Elasticache
+            for (let engineId of Object.keys(elasticacheObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "elasticache", connectionId : elasticacheObjectContainer[engineId].objectProperties.connectionId, creationTime : elasticacheObjectContainer[engineId].objectProperties.creationTime  });
+            }
+            
+            //-- MemoryDB
+            for (let engineId of Object.keys(memoryDBObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "memorydb", connectionId : memoryDBObjectContainer[engineId].objectProperties.connectionId, creationTime : memoryDBObjectContainer[engineId].objectProperties.creationTime  }); 
+            }
+            
+            //-- DocumentDB
+            for (let engineId of Object.keys(documentDBObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "documentdb", connectionId : documentDBObjectContainer[engineId].objectProperties.connectionId, creationTime : documentDBObjectContainer[engineId].objectProperties.creationTime  }); 
+            }
+            
+            
+            //-- Aurora-Postgresql
+            for (let engineId of Object.keys(auroraPostgresqlObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "aurora-postgresql", connectionId : auroraPostgresqlObjectContainer[engineId].objectProperties.connectionId, creationTime : auroraPostgresqlObjectContainer[engineId].objectProperties.creationTime  }); 
+            }
+            
+            //-- Aurora-Mysql
+            for (let engineId of Object.keys(auroraMysqlObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "aurora-mysql", connectionId : auroraMysqlObjectContainer[engineId].objectProperties.connectionId, creationTime : auroraMysqlObjectContainer[engineId].objectProperties.creationTime  }); 
+            }
+            
+            
+            //-- Rds-Mysql
+            for (let engineId of Object.keys(rdsMysqlObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "rds-mysql", connectionId : rdsMysqlObjectContainer[engineId].objectProperties.connectionId, creationTime : rdsMysqlObjectContainer[engineId].objectProperties.creationTime  });  
+            }
+            
+            
+            //-- Rds-Postgresql
+            for (let engineId of Object.keys(rdsPostgresqlObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "rds-postgresql", connectionId : rdsPostgresqlObjectContainer[engineId].objectProperties.connectionId, creationTime : rdsPostgresqlObjectContainer[engineId].objectProperties.creationTime  });  
+            }
+            
+            
+            //-- Rds-Sqlserver
+            for (let engineId of Object.keys(rdsSqlserverObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "rds-sqlserver", connectionId : rdsSqlserverObjectContainer[engineId].objectProperties.connectionId, creationTime : rdsSqlserverObjectContainer[engineId].objectProperties.creationTime  });  
+            }
+            
+            
+            //-- Rds-Oracle
+            for (let engineId of Object.keys(rdsOracleObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "rds-oracle", connectionId : rdsOracleObjectContainer[engineId].objectProperties.connectionId, creationTime : rdsOracleObjectContainer[engineId].objectProperties.creationTime  });  
+            }
+            
+            
+            //-- DynamoDB
+            for (let engineId of Object.keys(dynamoDBObjectContainer)) {
+                    connections.push({ engineId : engineId, type : "dynamodb", connectionId : dynamoDBObjectContainer[engineId].objectProperties.connectionId, creationTime : dynamoDBObjectContainer[engineId].objectProperties.creationTime  });  
+            }
+        
+        res.status(200).send({ csrfToken: req.csrfToken(), engineConnections : connections } )
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({});
+    }
+    
+});
+
+
+
+//--++ API : GENERAL : Release Connection
+app.get("/api/aws/engines/connections/terminate", async (req, res) => {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+    
+    var params = req.query;
+    
+    try {
+        
+            switch(params.type) {
+                
+                case "elasticache":
+                    delete elasticacheObjectContainer[params.engineId];
+                    break;
+                
+                case "memorydb":
+                    delete memoryDBObjectContainer[params.engineId];
+                    break;
+                    
+                case "documentdb":
+                    delete documentDBObjectContainer[params.engineId];
+                    break;
+                    
+                case "aurora-postgresql":
+                    delete auroraPostgresqlObjectContainer[params.engineId];
+                    break;
+                    
+                case "aurora-mysql":
+                    delete auroraMysqlObjectContainer[params.engineId];
+                    break;
+                    
+                case "rds-mysql":
+                    delete rdsMysqlObjectContainer[params.engineId];
+                    break;
+                    
+                case "rds-postgresql":
+                    delete rdsPostgresqlObjectContainer[params.engineId];
+                    break;
+                    
+                case "rds-sqlserver":
+                    delete rdsSqlserverObjectContainer[params.engineId];
+                    break;
+                    
+                case "rds-oracle":
+                    delete rdsOracleObjectContainer[params.engineId];
+                    break;
+                    
+                case "dynamodb":
+                    delete dynamoDBObjectContainer[params.engineId];
+                    break;
+            }            
+        
+        console.log("Connection Terminated : " + params.engineId );
+        res.status(200).send({ csrfToken: req.csrfToken(), status : "success" } )
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({});
+    }
+    
+});
+
+
+
+
+//--++ API : GENERAL : Get Recommendations
+app.get("/api/aws/application/recommendation/get", async (req, res) => {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+ 
+    var params = req.query;
+    
+    try {
+        
+        var response = await GenerativeIAObject.getRecommendations({});
+        
+        res.status(200).send({ csrfToken: req.csrfToken(), response : response } )
+        
+    } catch(error) {
+        console.log(error);
+        res.status(401).send({});
+    }
+    
+});
+
 
 
 //--#################################################################################################### 

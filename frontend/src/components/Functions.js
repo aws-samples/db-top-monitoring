@@ -29,6 +29,20 @@ const gatherVersionJsonFile = async (params) => {
 }
 
 
+//-- Version Functions
+export const gatherLocalVersion = async () => {
+    var json = { release : "0.0.0", date : "2023-09-01"}
+    try {
+        const response = await fetch("/version.json");
+        json = await response.json();
+    }
+    catch{
+        
+    }
+    return(json);
+}
+
+
 //--++ Custom Format Functions
 
 export function customFormatNumber(value,decimalLength) {

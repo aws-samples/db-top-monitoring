@@ -34,6 +34,9 @@ import SmDocumentDB01 from "./pages/Sm-documentdb-01";
 import SmDocumentDB02 from "./pages/Sm-documentdb-02";
 import SmTablesDynamoDB01 from "./pages/Sm-tablesDynamoDB-01";
 import SmDynamoDB01 from "./pages/Sm-dynamodb-01";
+import SmApplicationUpdate from "./pages/Sm-appUpdate";
+import SmEngineConnections from "./pages/Sm-engineConnections";
+
 
 
 //-- Components
@@ -91,6 +94,8 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
                     <Route path="/sm-documentdb-01" element={<ProtectedApp><ProtectedDb> <SmDocumentDB01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-documentdb-02" element={<ProtectedApp><ProtectedDb> <SmDocumentDB02 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-dynamodb-01" element={<ProtectedApp> <SmDynamoDB01 /></ProtectedApp>} />
+                    <Route path="/update" element={<ProtectedApp> <SmApplicationUpdate /></ProtectedApp>} />
+                    <Route path="/connections" element={<ProtectedApp> <SmEngineConnections /></ProtectedApp>} />
                 </Routes>
               </BrowserRouter>
           </Authenticator.Provider>

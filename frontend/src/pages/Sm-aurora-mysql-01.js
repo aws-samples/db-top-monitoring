@@ -1074,7 +1074,7 @@ function App() {
                                                                                     }
                                                                                   }
                                                                           >
-                                                                            Compartive Mode
+                                                                            Comparative Mode
                                                                           </Button>
                                                                         </SpaceBetween>
                                                             }
