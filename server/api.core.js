@@ -1,5 +1,5 @@
 //-- Import Class Objects
-const { classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster, classDynamoDB } = require('./class.engine.js');
+const { classCluster, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classElasticacheServerlessCluster, classDynamoDB, classAuroraLimitlessPostgresqlEngine } = require('./class.engine.js');
 const { classAWS } = require('./class.aws.js');
 const { classGenerativeIA } = require('./class.aws.js');
 const { classApplicationUpdate } = require('./class.update.js');
@@ -19,6 +19,8 @@ var rdsPostgresqlObjectContainer = [];
 var rdsSqlserverObjectContainer = [];
 var rdsOracleObjectContainer = [];
 var dynamoDBObjectContainer = [];
+var auroraLimitlessPostgresqlObjectContainer = [];
+
 
 
 //-- Application Update
@@ -76,7 +78,7 @@ gatherPemKeys(issCognitoIdp);
 //   ---------------------------------------- SCHEDULER
 //--#################################################################################################### 
 
-function scheduleJob5s(){
+async function scheduleJob5s(){
     
     var timestamp = new Date();
     console.log({ time : timestamp.toTimeString().split(' ')[0], message : "5s - Scheduler" });
@@ -102,6 +104,11 @@ function scheduleJob5s(){
             auroraPostgresqlObjectContainer[engineId].refreshData();
     }
     
+    //-- Aurora-Postgresql-Limitless
+    for (let engineId of Object.keys(auroraLimitlessPostgresqlObjectContainer)) {
+            await auroraLimitlessPostgresqlObjectContainer[engineId].refreshData();
+    }
+
     //-- Aurora-Mysql
     for (let engineId of Object.keys(auroraMysqlObjectContainer)) {
             auroraMysqlObjectContainer[engineId].refreshData();
@@ -141,8 +148,8 @@ function scheduleJob5s(){
     
 }
 
-scheduleObjects['5s'] = schedule.scheduleJob('*/5 * * * * *', function(){
-                                            scheduleJob5s();
+scheduleObjects['5s'] = schedule.scheduleJob('*/5 * * * * *', async function(){
+                                            await scheduleJob5s();
                                             });
             
 
@@ -1390,6 +1397,260 @@ async function closeConnectionAuroraPostgresqlCluster(req, res) {
 }
 
 
+
+
+//--#################################################################################################### 
+//   ---------------------------------------- AURORA - POSTGRESQL - LIMITLESS
+//--#################################################################################################### 
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Authentication - Cluster
+app.post("/api/aurora/cluster/postgresql/limitless/authentication/", authenticationAuroraPostgresqlLimitlessCluster);
+async function authenticationAuroraPostgresqlLimitlessCluster(req, res) {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+
+ 
+    var params = req.body.params;
+    var session_id=uuid.v4();
+    var token = generateToken({ session_id: session_id});
+            
+    try {
+            
+            var objConnection = new classAuroraLimitlessPostgresqlEngine({ connection : {...params} });
+            if (await objConnection.authentication()==true){
+                res.status(200).send( {"result":"auth1", "session_id": session_id, "session_token": token });
+            }
+            else {
+                res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+            }
+            
+                
+    }
+    catch(err){
+        console.log(err);
+        res.status(200).send( {"result":"auth0", "session_id": session_id, "session_token": token });
+    }
+
+}
+
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Open Connection - Cluster
+app.post("/api/aurora/cluster/postgresql/limitless/open/connection/", openConnectionAuroraPostgresqlLimitlessCluster);
+async function openConnectionAuroraPostgresqlLimitlessCluster(req, res) {
+
+    // Token Validation
+    var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+
+    if (cognitoToken.isValid === false)
+        return res.status(511).send({ data: [], message : "Token is invalid"});
+
+ 
+    var params = req.body.params;
+    
+    try {
+        
+            var engineType = params.engineType;        
+            var objectId = engineType + ":" + params.clusterId;
+            var newObject = false;
+            var creationTime = new Date().toISOString();
+            var connectionId = params.connectionId;
+            
+            if (!(objectId in auroraLimitlessPostgresqlObjectContainer)) {
+                console.log("Creating new object : " + objectId);
+                auroraLimitlessPostgresqlObjectContainer[objectId] = new classAuroraLimitlessPostgresqlEngine({
+                                    properties : { name : params.clusterId, clusterId: params.clusterId, uid: objectId, engineType : engineType, size : "", totalNodes : 0, status : "", networkRate : 0, connectionId: connectionId, creationTime : creationTime, lastUpdate : "" },
+                                    connection : { ...params },
+                                    metrics : [
+                                                {name : "vcpu", type : 2,history : 20 },
+                                                {name : "cpu", type : 2,history : 20 },
+                                                {name : "readIOPS", type : 2, history : 20 },
+                                                {name : "writeIOPS",type : 2,  history : 20 },
+                                                {name : "totalIOPS", type : 2, history: 20 },
+                                                {name : "readIOBytes", type : 2, history : 20 },
+                                                {name : "writeIOBytes",type : 2,  history : 20 },
+                                                {name : "totalIOBytes", type : 2, history: 20 },
+                                                {name : "networkBytesIn", type : 2, history : 20 },
+                                                {name : "networkBytesOut", type : 2, history : 20 },
+                                                {name : "totalNetworkBytes", type : 2, history: 20 },                                                
+                                                {name : "xactTotal", type : 1, history: 20 },
+                                                {name : "xactCommit", type : 1, history: 20 },
+                                                {name : "xactRollback", type : 1, history: 20 },
+                                                {name : "tuples", type : 1, history: 20 },
+                                                {name : "tuplesWritten", type : 1, history: 20 },
+                                                {name : "tuplesRead", type : 1, history: 20 },
+                                                {name : "tupReturned", type : 1, history: 20 },
+                                                {name : "tupFetched", type : 1, history: 20 },
+                                                {name : "tupInserted", type : 1, history: 20 },
+                                                {name : "tupDeleted", type : 1, history: 20 },
+                                                {name : "tupUpdated", type : 1, history: 20 },
+                                                {name : "numbackends", type : 2, history: 20 },
+                                                {name : "numbackendsActive", type : 2, history: 20 },
+                                            ]
+                                    }
+                                );
+                
+                await auroraLimitlessPostgresqlObjectContainer[objectId].connect();               
+                await auroraLimitlessPostgresqlObjectContainer[objectId].refreshClusterMedatadaGlobal();                       
+                newObject = true;
+            }
+            else {
+                console.log("Reusing object : " + objectId);
+                connectionId = auroraLimitlessPostgresqlObjectContainer[objectId].objectProperties.connectionId;
+                creationTime = auroraLimitlessPostgresqlObjectContainer[objectId].objectProperties.creationTime;
+                
+            }
+            res.status(200).send({ data : "Connection request completed", shards : auroraLimitlessPostgresqlObjectContainer[objectId].getClusterInfo(), newObject : newObject, connectionId : connectionId, creationTime :  creationTime });
+                    
+            
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).send(error);
+    }
+
+}
+
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Gather Information
+app.get("/api/aurora/cluster/postgresql/limitless/gather/stats/", gatherStatsAuroraPostgresqlLimitlessCluster);
+async function gatherStatsAuroraPostgresqlLimitlessCluster(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+ 
+        try
+            {
+                var params = req.query;
+                
+                var result = auroraLimitlessPostgresqlObjectContainer[params.engineType + ":" + params.clusterId].getClusterInfo();                                
+                res.status(200).send({ ...result  });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Gather Cloudwatch Information
+app.get("/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics", gatherClwAuroraPostgresqlLimitlessShard);
+async function gatherClwAuroraPostgresqlLimitlessShard(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+ 
+        try
+            {
+                var params = req.query;
+                
+                var result = await auroraLimitlessPostgresqlObjectContainer[params.engineType + ":" + params.clusterId].getCloudwatchMetrics(params);                                
+                res.status(200).send({ ...result  });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Gather Information
+app.get("/api/aurora/cluster/postgresql/limitless/gather/stats/details", gatherStatsDetailsAuroraPostgresqlLimitlessCluster);
+async function gatherStatsDetailsAuroraPostgresqlLimitlessCluster(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+ 
+        try
+            {
+                var params = req.query;
+                
+                var result = auroraLimitlessPostgresqlObjectContainer[params.engineType + ":" + params.clusterId].getClusterMetricDetails(params);                                
+                res.status(200).send({ ...result  });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Gather Cloudwatch Information
+app.get("/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics/table", gatherClwAuroraPostgresqlLimitlessTable);
+async function gatherClwAuroraPostgresqlLimitlessTable(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+ 
+        try
+            {
+                var params = req.query;
+                
+                var result = await auroraLimitlessPostgresqlObjectContainer[params.engineType + ":" + params.clusterId].getCloudwatchMetricsTable(params);                                
+                res.status(200).send({ ...result  });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
+
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Close Connection
+app.get("/api/aurora/cluster/postgresql/limitless/close/connection/", closeConnectionAuroraPostgresqlLimitlessCluster);
+async function closeConnectionAuroraPostgresqlLimitlessCluster(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+ 
+        try
+            {
+                var params = req.query;
+                
+                auroraLimitlessPostgresqlObjectContainer[params.engineType + ":"  + params.clusterId].disconnect();
+                delete auroraLimitlessPostgresqlObjectContainer[params.engineType + ":" + params.clusterId];
+                res.status(200).send( {"result":"Disconnection completed"});
+                
+                
+        }
+        catch(err){
+                console.log(err);
+                res.status(401).send( {"error": String(err)});
+        }
+}
 
 
 //--#################################################################################################### 

@@ -68,6 +68,7 @@ class classMetrics {
                     
                     this.currentObject = {};
                     this.oldObject = {};
+                    this.currentTime = (new Date()).getTime();
                     
                     object.metrics.forEach(metric => {
                         this.metricList =  {...this.metricList, [metric.name]: { name : metric.name, label : metric.label, value : 0, type : metric.type, history : metric.history, data : Array(metric.history).fill(null), timestamp: "" } }
@@ -164,14 +165,16 @@ class classMetrics {
           //-- Take new snapshot
           newSnapshot(currentObject,currentTime) {
                     
-                    this.oldObject = this.currentObject;
-                    this.oldTime = this.currentTime;
-                    
-                    this.currentObject = currentObject;
-                    this.currentTime = currentTime;
-                    this.totalSnaps++;
-                    if (this.totalSnaps > 2)
-                        this.#updateData();
+                    if ( currentTime > this.currentTime ) {
+                        this.oldObject = this.currentObject;
+                        this.oldTime = this.currentTime;
+                        
+                        this.currentObject = currentObject;
+                        this.currentTime = currentTime;
+                        this.totalSnaps++;
+                        if (this.totalSnaps > 2)
+                            this.#updateData();
+                }
                         
           }
           
@@ -193,6 +196,13 @@ class classMetrics {
                 }
           }
           
+
+          setItemListValues(itemName,itemListValues){
+                this.metricList[itemName].value = itemListValues[0];
+                this.metricList[itemName].data = itemListValues;
+
+          }
+
           getItemValue(itemName) {
                   return this.metricList[itemName].value;
           }
@@ -4174,5 +4184,856 @@ class classDynamoDB {
 
 
 
-module.exports = { classMetrics, classCluster, classNode, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classDocumentDBElasticShard, classElasticacheServerlessCluster, classDynamoDB };
+//--#############
+//--############# CLASS : classAuroraLimitlessPostgresqlEngine                                                                                               
+//--#############
+
+
+class classAuroraLimitlessPostgresqlEngine {
+
+    //-- Looging
+    #objLog = new classLogging({ name : "classAuroraLimitlessPostgresqlEngine", instance : "generic" });
+    #connection = {};
+    
+    ///-- subclusters
+    #sql_subclusters = `
+                        SELECT 
+                            subcluster_id,
+                            subcluster_type                         
+                        FROM 
+                            rds_aurora.limitless_subclusters
+                        order by 
+                            subcluster_id
+    `;
+
+    ///-- Database Queries
+    #sql_statement_metrics = `
+                        SELECT 
+                            a.subcluster_id,
+                            a.subcluster_type,
+                            SUM(a.numbackends) as numbackends,
+                            SUM(a.tup_returned) as tup_returned, 
+                            SUM(a.tup_fetched) as tup_fetched, 
+                            SUM(a.tup_inserted) as tup_inserted,
+                            SUM(a.tup_updated) as tup_updated,
+                            SUM(a.tup_deleted) as tup_deleted, 
+                            SUM(a.blk_read_time) as blk_read_time, 
+                            SUM(a.blk_write_time) as blk_write_time, 
+                            SUM(a.xact_commit) as xact_commit, 
+                            SUM(a.xact_rollback) as xact_rollback,
+                            MAX(b.numbackendsactive) as numbackendsactive
+                        FROM 
+                            rds_aurora.limitless_stat_database a,
+                            (
+                            select 
+                                subcluster_id,
+                                subcluster_type,
+                                count(*) as numbackendsactive
+                            from 
+                                rds_aurora.limitless_stat_activity
+                            where 
+                                state != 'idle' 
+                            group by
+                                subcluster_id,
+                                subcluster_type
+                            ) b
+                        WHERE
+                            a.subcluster_id = b.subcluster_id
+                        GROUP BY
+                        a.subcluster_id,
+                        a.subcluster_type
+                        order by 
+                        a.subcluster_id
+    `;
+    
+    #sql_statement_sessions = `
+                        SELECT 
+                            subcluster_id,
+                            subcluster_type,
+                            distributed_session_id,
+                            pid as "PID",
+                            usename as "Username",
+                            state as "State",
+                            wait_event as "WaitEvent",
+                            datname as "Database",
+                            CAST(CURRENT_TIMESTAMP-query_start AS VARCHAR)  as "ElapsedTime",
+                            application_name as "AppName",
+                            client_addr as "Host",
+                            distributed_query_id,
+                            query_id,
+                            query as "SQLText" 
+                        FROM 
+                            rds_aurora.limitless_stat_activity
+                        ORDER BY 
+                            query_start asc limit 10;
+    `;
+
+    #objectMetrics = [];
+    #cluster = { 
+                metrics : { global : {}, routers : {}, shards : {} } ,
+        };
+    
+    #shards = {};    
+    #subClustersIds = {};
+    #clusterMetadata = {};
+    #shardGroupMetadata = {};
+
+    //-- Cloudwatch Metrics   
+    
+    #cloudwatchMetricsShards = {};
+    #metricCatalog = [
+                    'BufferCacheHitRatio',
+                    'CommitLatency',
+                    'CommitThroughput',
+                    'NetworkReceiveThroughput',
+                    'NetworkThroughput',
+                    'NetworkTransmitThroughput',
+                    'ReadIOPS',
+                    'ReadLatency',
+                    'ReadThroughput',
+                    'StorageNetworkReceiveThroughput',
+                    'StorageNetworkThroughput',
+                    'StorageNetworkTransmitThroughput',
+                    'TempStorageIOPS',
+                    'TempStorageThroughput',
+                    'WriteIOPS',
+                    'WriteLatency',
+                    'WriteThroughput'
+    ];
+
+    
+
+
+    //-- Constructor method
+    constructor(object) { 
+            this.objectConnection = object.connection;
+            this.objectMetrics = object.metrics;
+            this.objectProperties = object.properties;
+            this.isAuthenticated = false;            
+            this.#objLog.properties = {...this.#objLog.properties, instance : this.objectConnection.host }  
+            
+            //Initialization cluster level metrics
+            if (object.hasOwnProperty("metrics")) {                
+                this.#cluster['metrics']['global'] = new classMetrics({ metrics : this.objectMetrics }) ;
+                this.#cluster['metrics']['shards'] = new classMetrics({ metrics : this.objectMetrics }) ;
+                this.#cluster['metrics']['routers'] = new classMetrics({ metrics : this.objectMetrics }) ;
+            }           
+            
+    }
+    
+    
+    //-- Open Connection
+    async #openConnection() { 
+        
+            this.isAuthenticated = false;
+            var params = this.objectConnection;                        
+            try {
+                
+                            this.#objLog.write("#openConnection","info","Postgresql Instance Connected : " + params.host);
+                         
+                            this.#connection = new postgresql({
+                                                                  user: params.username,
+                                                                  host: params.host,
+                                                                  database: 'postgres_limitless',
+                                                                  password: params.password,
+                                                                  port: params.port,
+                                                                  connectionReconnectTimeoutMillis: 90000,
+                            });
+                            
+                            
+                            this.#connection.on('error', (err, client) => {
+                                        console.log(err);
+                                        this.#objLog.write("#openConnection","err",err);
+                                        
+                            });
+                        
+                            await this.#connection.connect();
+                            var command = await this.#connection.query('SELECT 1 as value');
+                            this.isAuthenticated = true;
+                            
+                           
+            }
+            catch(err){
+                this.#objLog.write("#openConnection","err",err);
+            }    
+    }
+    
+    connect() { 
+        this.#openConnection();
+    }
+    
+
+
+    //-- Close Connection
+    async #closeConnection() { 
+        try {
+            this.#objLog.write("#closeConnection","info", "Disconnection completed : " + this.objectConnection.host );
+                this.#connection.end();
+        }
+        catch(err){
+                this.#objLog.write("#closeConnection","err", String(err) + "-" + this.objectConnection.host );
+        }
+        
+    }
+    
+
+
+    //-- Close Connection
+    disconnect() { 
+        this.#closeConnection();
+    }
+
+    
+
+    //-- Verify connection
+    async isConnected() { 
+            try {
+                    
+                        var command = await this.#connection.query('SELECT 1 as value');
+                        console.log(command);
+                        if (command.rows[0]['value'] =="1")
+                            return true;
+                        else
+                            return false;
+            }
+            catch(err){
+                return false;
+            }
+        
+    }
+    
+    
+
+    //-- Authentication
+    async authentication() { 
+        try {
+                await this.#openConnection();
+                await this.#closeConnection();
+                return this.isAuthenticated;
+        }
+        catch(err){
+            return this.isAuthenticated;;
+        }
+    }
+    
+    
+    
+    //-- Gather new snapshot
+    async getSnapshot(){     
+
+            try
+            {
+             
+                //-- Gather metadata from AWS API
+                this.#clusterMetadata = await AWSObject.getAuroraLimitlessClusterObject(this.objectProperties.clusterId);
+                this.#shardGroupMetadata = await AWSObject.getAuroraLimitlessDbShardObject(this.objectProperties.clusterId);                
+
+                //-- Database Metrics
+                this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+                var currentOperations = (await this.#connection.query(this.#sql_statement_metrics)).rows;
+                
+                        
+                var result = {};
+                var clusterSnapshot = {};
+                var routerSnapshot = {};
+                var shardSnapshot = {};
+                var snapshotTime = new Date();
+                for (let i = 0; i < currentOperations.length ; i++){                                
+               
+                                var item = currentOperations[i];                                                                                   
+                                var logStreamName = this.#shards[item['subcluster_id']]?.['dbShardResourceId'] + "/" + 
+                                                this.#shards[item['subcluster_id']]?.['codeType'] + "/" + 
+                                                this.#shards[item['subcluster_id']]?.['subClusterId'] + "-" + 
+                                                this.#shards[item['subcluster_id']]?.['subInstanceId'] ;
+                                                                                
+                                var result = await AWSObject.getCloudWatchRecords({ 
+                                                                                            logStreamName: logStreamName,
+                                                                                            limit: 1,
+                                                                                            logGroupName: 'RDSOSMetrics',
+                                                                                            startFromHead: false                                                                                               
+                                                                                        
+                                });
+
+                                var record = JSON.parse(result.events[0].message);     
+                                
+                                var nodeSnapshot = {
+                                                vcpu: parseFloat(record['numVCPUs']),                                                                                             
+                                                readIOPS: parseFloat(record['diskIO']?.[0]?.['readIOsPS']),
+                                                writeIOPS: parseFloat(record['diskIO']?.[0]?.['writeIOsPS']),
+                                                totalIOPS: parseFloat(record['diskIO']?.[0]?.['readIOsPS']) + parseFloat(record['diskIO']?.[0]?.['writeIOsPS']),
+                                                readIOBytes: parseFloat(record['diskIO']?.[0]?.['readThroughput']),
+                                                writeIOBytes: parseFloat(record['diskIO']?.[0]?.['writeThroughput']),
+                                                totalIOBytes: parseFloat(record['diskIO']?.[0]?.['readThroughput']) + parseFloat(record['diskIO']?.[0]?.['writeThroughput']),
+                                                networkBytesIn: parseFloat(record['network']?.[0]?.['rx']),
+                                                networkBytesOut: parseFloat(record['network']?.[0]?.['tx']),
+                                                totalNetworkBytes: parseFloat(record['network']?.[0]?.['rx']) + parseFloat(record['network']?.[0]?.['tx']),
+                                                tuples :    parseFloat(item['tup_fetched']) +
+                                                            parseFloat(item['tup_inserted']) +
+                                                            parseFloat(item['tup_updated']) +
+                                                            parseFloat(item['tup_deleted']),
+                                                tuplesWritten : parseFloat(item['tup_inserted']) +
+                                                            parseFloat(item['tup_updated']) +
+                                                            parseFloat(item['tup_deleted']),
+                                                tuplesRead : parseFloat(item['tup_fetched']),
+                                                xactTotal: parseFloat(item['xact_commit']) + parseFloat(item['xact_rollback']),
+                                                xactCommit: parseFloat(item['xact_commit']),
+                                                xactRollback: parseFloat(item['xact_rollback']),
+                                                tupReturned: parseFloat(item['tup_returned']),
+                                                tupFetched: parseFloat(item['tup_fetched']),
+                                                tupInserted: parseFloat(item['tup_inserted']),
+                                                tupDeleted: parseFloat(item['tup_deleted']),
+                                                tupUpdated: parseFloat(item['tup_updated']),
+                                                numbackends : parseFloat(item['numbackends']),
+                                                numbackendsActive : parseFloat(item['numbackendsactive'])
+                                };
+                                
+                                this.#shards[item['subcluster_id']].metrics.newSnapshot(nodeSnapshot,snapshotTime.getTime());                                                                  
+                                this.#shards[item['subcluster_id']] = {...this.#shards[item['subcluster_id']], "processList" : record['processList'] };                                 
+                                
+                                
+                                for (let metric of Object.keys(nodeSnapshot)) {
+                                    if (!(clusterSnapshot.hasOwnProperty(metric)))
+                                        clusterSnapshot[metric] = 0;
+
+                                    if (!(shardSnapshot.hasOwnProperty(metric)))
+                                        shardSnapshot[metric] = 0;
+
+                                    if (!(routerSnapshot.hasOwnProperty(metric)))
+                                        routerSnapshot[metric] = 0;
+                                    
+                                    clusterSnapshot[metric] = clusterSnapshot[metric] + nodeSnapshot[metric];                                
+
+                                    if(item['subcluster_type'] == "shard")
+                                        shardSnapshot[metric] = shardSnapshot[metric] + nodeSnapshot[metric]; 
+                                    
+                                    if(item['subcluster_type'] == "router")
+                                        routerSnapshot[metric] = routerSnapshot[metric] + nodeSnapshot[metric]; 
+                                    
+
+
+                                }
+
+
+                        }                          
+              
+                this.#cluster.metrics.global.newSnapshot(clusterSnapshot,snapshotTime.getTime());
+                this.#cluster.metrics.shards.newSnapshot(shardSnapshot,snapshotTime.getTime());
+                this.#cluster.metrics.routers.newSnapshot(routerSnapshot,snapshotTime.getTime());
+
+            }
+            catch(err){
+                    this.#objLog.write("getSnapshot","err",err);                   
+            }
+        
+    }
+    
+   
+    //-- Gather Active sessions
+    async getActiveSessions(){
+        try {
+            
+            var sessions = await this.#connection.query(this.#sql_statement_sessions);
+            if (sessions.rows.length > 0 ) {
+                    sessions.rows.forEach(element => {
+                      element.instanceId = this.objectConnection.instanceId;
+                    });
+            }
+          
+            return sessions.rows;
+          
+        }
+        catch(err){
+                    this.#objLog.write("getActiveSessions","err",err);
+                    return [];
+        }
+        
+    }
+    
+    
+    //-- Execute a query
+    async executeQuery(object) { 
+            try {
+                    
+                        var command = (await this.#connection.query(object.query));
+                        return command;
+                        
+            }
+            catch(err){
+                this.#objLog.write("executeQuery","err",err);
+                return [];
+            }
+        
+    }
+
+
+    //-- Refresh Cluster Data
+    async refreshData() {         
+        await this.getSnapshot();      
+        await this.getCloudwatchMetricsTable();        
+    }
+
+
+        
+
+    //-- Refresh all metadata and shards globally
+    async refreshClusterMedatadaGlobal(object){
+        try {
+            
+            
+
+            //-- Gather instances ids from CloudWatch
+            var result = await AWSObject.getGenericMetricsInsight({ 
+                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = 'aur-pgs-limitless-01' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
+                                                            period : 60 * 180, 
+                                                            interval : 180
+            });
+            
+            
+            result.forEach(item => {                              
+                var elements = item.Label.split(" ");
+                this.#subClustersIds = { ...this.#subClustersIds, [elements[0]] : { subClusterId : elements[0], subInstanceId : elements[1] } };
+                
+            }); 
+
+            
+            //-- Gather metadata from AWS API
+            this.#clusterMetadata = await AWSObject.getAuroraLimitlessClusterObject(this.objectProperties.clusterId);
+            this.#shardGroupMetadata = await AWSObject.getAuroraLimitlessDbShardObject(this.objectProperties.clusterId);
+
+
+            //-- Gather subclusters ids from db engine            
+            var result = (await this.#connection.query(this.#sql_subclusters)).rows;            
+
+            result.forEach(item => {                              
+                if ( (!(this.#shards.hasOwnProperty(item['subcluster_id']))) && this.#subClustersIds.hasOwnProperty(item['subcluster_id']) ) {
+                    this.#shards = {...this.#shards , 
+                                    [item['subcluster_id']] : { 
+                                                                dbShardResourceId : this.#shardGroupMetadata['DBShardGroupResourceId'], 
+                                                                type : item['subcluster_type'], 
+                                                                codeType : item['subcluster_type']=="shard" ? "DAS" : "DTR" , 
+                                                                subClusterId : item['subcluster_id'],                                                                  
+                                                                subInstanceId : this.#subClustersIds[item['subcluster_id']]?.['subInstanceId'], 
+                                                                metrics : new classMetrics({ metrics : this.objectMetrics }) 
+                                                            } 
+                    } ;
+                }                   
+            });
+            
+            //-- Cloudwatch Metric initialization
+            this.cloudwatchMetricInitialization();
+
+
+        }
+        catch(err){
+                this.#objLog.write("refreshClusterMedatadaGlobal","err",err);                
+        }
+    }
+     
+    
+
+    //-- Refresh cluster metadata from AWS API only
+    async refreshClusterMedatadaSingle(object){
+        try {
+       
+            //-- Gather instances ids from CloudWatch
+            var result = await AWSObject.getGenericMetricsInsight({ 
+                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = 'aur-pgs-limitless-01' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
+                                                            period : 60 * 180, 
+                                                            interval : 180
+            });
+            
+            
+            result.forEach(item => {                              
+                var elements = item.Label.split(" ");
+                this.#subClustersIds = { ...this.#subClustersIds, [elements[0]] : { subClusterId : elements[0], subInstanceId : elements[1] } };
+                
+            }); 
+
+            
+            //-- Gather metadata from AWS API
+            this.#clusterMetadata = await AWSObject.getAuroraLimitlessClusterObject(this.objectProperties.clusterId);
+            this.#shardGroupMetadata = await AWSObject.getAuroraLimitlessDbShardObject(this.objectProperties.clusterId);
+
+
+            //-- Gather subclusters ids from db engine            
+            var result = (await this.#connection.query(this.#sql_subclusters)).rows;            
+
+            result.forEach(item => {                              
+                if ( (!(this.#shards.hasOwnProperty(item['subcluster_id']))) && this.#subClustersIds.hasOwnProperty[item['subcluster_id']] ) {
+                    this.#shards = {...this.#shards , 
+                                    [item['subcluster_id']] : { 
+                                                                dbShardResourceId : this.#shardGroupMetadata['DBShardGroupResourceId'], 
+                                                                type : item['subcluster_type'], 
+                                                                codeType : item['subcluster_type']=="shard" ? "DAS" : "DTR" , 
+                                                                subClusterId : item['subcluster_id'],                                                                  
+                                                                subInstanceId : this.#subClustersIds[item['subcluster_id']]?.['subInstanceId'], 
+                                                                metrics : new classMetrics({ metrics : this.objectMetrics }) 
+                                                            } 
+                    } ;
+                }              
+            });       
+
+
+        }
+        catch(err){
+                this.#objLog.write("refreshClusterMedatadaSingle","err",err);
+                
+        }
+    }
+
+
+    //-- Gather Cluster Information
+    getClusterInfo(){
+
+        var shards = [];
+        var routers = [];
+        var chartSummary = { categories : [], data : [] } ;
+        var chartRaw = [];
+        try {
+                for (let shardId of Object.keys(this.#shards)) {                                         
+                    if (this.#shards[shardId].type == "shard"){
+                        shards.push({ ...this.#shards[shardId],
+                            metrics : this.#shards[shardId].metrics.getMetricList(), 
+                        });
+                    }
+                    else{
+                        routers.push({ ...this.#shards[shardId],
+                            metrics : this.#shards[shardId].metrics.getMetricList(),
+                        });
+                    }                    
+                    
+                    chartRaw.push({ 
+                                    name : this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'] ,
+                                    value : this.#shards[shardId].metrics.getItem("xactCommit")['value'] 
+                    });
+                }
+
+                chartRaw.sort((a, b) => b.value - a.value);
+                chartRaw.forEach(function(item, index) {    
+                    chartSummary.categories.push(item.name);
+                    chartSummary.data.push(Math.trunc(item.value));                                          
+                });
+
+
+
+        }
+        catch(err){
+            this.#objLog.write("getClusterInfo","err",err);
+        }
+
+        return { cluster : { 
+                                status : this.#shardGroupMetadata['Status'],
+                                maxACU : this.#shardGroupMetadata['MaxACU'],
+                                minACU : this.#shardGroupMetadata['MinACU'],
+                                shardId : this.#shardGroupMetadata['DBShardGroupIdentifier'],
+                                lastUpdate : this.objectProperties.lastUpdate,
+                                metrics : {...this.#cluster.metrics.global.getMetricList()},
+                                shards : shards, 
+                                routers : routers, 
+                                global : { shards : {...this.#cluster.metrics.shards.getMetricList()}, routers : {...this.#cluster.metrics.routers.getMetricList()} },
+                                chartSummary : chartSummary                           
+                            }
+
+            }
+
+        }
+
+
+
+
+        //--Gather Cluster Metrics
+        getClusterMetricDetails(object){
+            var history = [];                        
+            var value = 0;
+            try {
+                for (let shardId of Object.keys(this.#shards)) {                                         
+                
+                    history.push({ 
+                                name :  this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'] ,
+                                data : this.#shards[shardId].metrics.getItem(object.metricId)['history']?.['data'], 
+                    });            
+                }
+
+                value = this.#cluster.metrics.global.getItem(object.metricId)['value'];
+                history = history;
+
+            }
+            catch(err){
+                this.#objLog.write("getClusterMetricDetails","err",err);
+            }  
+            return { value : value, history : history };
+            
+        }
+
+
+
+
+        //-- Gather Cloudwatch metrics
+        async getCloudwatchMetrics(object){
+            
+            var result = { 
+                            labels : [], 
+                            values : [], 
+                            charts : [], 
+                            summary : { total : 0, average : 0, min : 0, max : 0, count : 0  }, 
+                            currentState : { 
+                                                chart : { 
+                                                            categories : [], 
+                                                            data : [] }, 
+                                                            value : 0 
+                                                        } 
+            };
+            var metrics = [];      
+            try {                  
+                switch(object.type){
+                    case "1" :
+                                var isTypeRequested=false;
+                                for (let shardId of Object.keys(this.#shards)) { 
+                                    
+                                    isTypeRequested=false;
+                                    if (object.resourceType == "ALL"){
+                                        isTypeRequested=true;
+                                    }else{
+                                        if (this.#shards[shardId]?.['codeType'] == object.resourceType){
+                                            isTypeRequested=true;
+                                        }
+                                    }
+                                    
+                                    if (isTypeRequested){
+
+                                        metrics.push({
+                                            namespace : "AWS/RDS",
+                                            label : this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'],
+                                            metric : object.metric,
+                                            dimension : [   
+                                                            {                                     
+                                                                "Name" : "DBClusterIdentifier", 
+                                                                "Value" : this.#shardGroupMetadata['DBClusterIdentifier'],
+                                                            },
+                                                            {                                     
+                                                                "Name" : "DBShardGroupIdentifier", 
+                                                                "Value" : this.#shardGroupMetadata['DBShardGroupIdentifier'], 
+                                                            },
+                                                            {                                     
+                                                                "Name" : "DBShardGroupSubClusterIdentifier", 
+                                                                "Value" : this.#shards[shardId]?.['subClusterId'], 
+                                                            },
+                                                            {                                     
+                                                                "Name" : "DBShardGroupInstanceIdentifier", 
+                                                                "Value" : this.#shards[shardId]?.['subInstanceId'], 
+                                                            },
+                                                            {                                     
+                                                                "Name" : "DBShardGroupSubClusterType", 
+                                                                "Value" : (this.#shards[shardId]?.['codeType'] == "DAS" ? "Data Access Shard" : "Distributed Transaction Router" ), 
+                                                            },
+
+                                                                ],
+                                                    stat : object.stat                    
+                                                });
+                                    }
+
+
+
+                                }
+
+                    break;
+
+                    case "2":
+                            metrics.push({
+                                            namespace : "AWS/RDS",
+                                            label : "DBShardGroup-" + this.#shardGroupMetadata['DBShardGroupIdentifier'],
+                                            metric : object.metric,
+                                            dimension : [   
+                                                            {                                     
+                                                                "Name" : "DBShardGroupIdentifier", 
+                                                                "Value" : this.#shardGroupMetadata['DBShardGroupIdentifier'], 
+                                                            }
+
+                                                        ],
+                                                    stat : object.stat                    
+                                });
+                    break;
+
+                    
+
+                }
+                
+                var dataset = await AWSObject.getGenericMetricsDataset({ metrics : metrics, interval : object.interval, period : object.period });
+                
+                var charts = [];
+                var currentState = { value : 0, chart : { categories : [], data : [] } };
+                var values = [];
+                var labels = [];
+
+                var summary = { total : 0, average : 0, min : 0, max : 0, count : 0 };
+                var max = [];
+                var min = [];
+                var rawData = [];
+                dataset.forEach(item => {                  
+                    
+                    var total = 0;
+                    var dataRecords = item.Timestamps.map((value, index) => {   
+                        total = total + item.Values[index];               
+                        summary.count = summary.count + 1;                                 
+                        return [item.Timestamps[index], item.Values[index] ];                             
+                    });
+                    
+                    max.push(Math.max(...item.Values));
+                    min.push(Math.min(...item.Values));                   
+                    summary.total = summary.total + total;
+
+                    values.push(total);                    
+                    labels.push(item.Label);
+                    charts.push({ name : item.Label, total : total, data : dataRecords });                    
+                    rawData.push({ name : item.Label, value : (dataRecords.length > 0 ? dataRecords[0][1] : 0 ) });
+                    currentState.value = currentState.value + (dataRecords.length > 0 ? dataRecords[0][1] : 0 );
+
+                });
+
+                rawData.sort((a, b) => b.value - a.value);
+                rawData.forEach(function(item, index) {    
+                    currentState.chart.categories.push(item.name);
+                    currentState.chart.data.push(Math.trunc(item.value));                      
+                    
+                });
+
+                summary.max = Math.max(...max);
+                summary.min = Math.max(...min);
+                summary.average = summary.total / summary.count;
+                result = { labels : labels, values : values, charts : charts, summary : summary, currentState : currentState };
+
+
+            }
+            catch(err){
+                this.#objLog.write("getCloudwatchMetrics","err",err);
+            }
+            
+            return result;
+
+        }
+
+
+        
+        
+        //-- Cloudwatch metric initiatlization
+        cloudwatchMetricInitialization(){
+
+            for (let shardId of Object.keys(this.#shards)) { 
+                
+                this.#cloudwatchMetricsShards[shardId] = [];                
+                this.#metricCatalog.forEach(metric => {
+
+                    this.#cloudwatchMetricsShards[shardId].push({
+                                                                    namespace : "AWS/RDS",
+                                                                    label : metric,
+                                                                    metric : metric,
+                                                                    dimension : [   
+                                                                                    {                                     
+                                                                                        "Name" : "DBClusterIdentifier", 
+                                                                                        "Value" : this.#shardGroupMetadata['DBClusterIdentifier'],
+                                                                                    },
+                                                                                    {                                     
+                                                                                        "Name" : "DBShardGroupIdentifier", 
+                                                                                        "Value" : this.#shardGroupMetadata['DBShardGroupIdentifier'], 
+                                                                                    },
+                                                                                    {                                     
+                                                                                        "Name" : "DBShardGroupSubClusterIdentifier", 
+                                                                                        "Value" : this.#shards[shardId]?.['subClusterId'], 
+                                                                                    },
+                                                                                    {                                     
+                                                                                        "Name" : "DBShardGroupInstanceIdentifier", 
+                                                                                        "Value" : this.#shards[shardId]?.['subInstanceId'], 
+                                                                                    },
+                                                                                    {                                     
+                                                                                        "Name" : "DBShardGroupSubClusterType", 
+                                                                                        "Value" : (this.#shards[shardId]?.['codeType'] == "DAS" ? "Data Access Shard" : "Distributed Transaction Router" ), 
+                                                                                    },
+
+                                                                                        ],
+                                                                        stat : "Average"                    
+                    });
+
+
+                });
+
+                
+            }
+
+        }
+
+
+
+        //-- Gather Cloudwatch metrics using table format
+        async getCloudwatchMetricsTable(){
+            var tableMetrics = [];
+            var tableSummary = {};
+            var chartSummary = { categories : [], data : [] };
+            var chartHistory = { CommitThroughput : [], DBShardGroupACUUtilization : [], DBShardGroupCapacity : []  };
+            try {
+                    for (let shardId of Object.keys(this.#shards)) { 
+                        
+                        var dataset = await AWSObject.getGenericMetricsDataset({ metrics : this.#cloudwatchMetricsShards[shardId], interval : 5, period : 1 });
+                        var columns = { resource : this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'], type : this.#shards[shardId]?.['type'] };
+                        
+                        dataset.forEach( metric => {
+                                
+                                if (!(tableSummary.hasOwnProperty(metric.Label)))
+                                    tableSummary[metric.Label] = 0;                                
+                        
+                                tableSummary[metric.Label] = tableSummary[metric.Label] + ( parseFloat(metric.Values[0] || 0 ) );
+                                columns = { [metric.Label] : metric.Values[0], ...columns};
+                                
+                        });        
+                        
+                        tableMetrics.push(columns);  
+                        chartSummary.categories.push(this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId']);                     
+                        chartSummary.data.push(columns['CommitThroughput']);                       
+                        
+                    }
+
+                    var dataset = await this.getCloudwatchMetrics({ 
+                                                                        type : "1",                                                                        
+                                                                        metric : 'CommitThroughput',
+                                                                        period : 1,
+                                                                        interval :  30,
+                                                                        stat : "Average",
+                                                                        resourceType : "ALL",
+                     });                    
+                     chartHistory['CommitThroughput'] = dataset['charts'];                 
+
+                     dataset = await this.getCloudwatchMetrics({ 
+                        type : "2",                                                                        
+                        metric : 'DBShardGroupACUUtilization',
+                        period : 1,
+                        interval :  30,
+                        stat : "Average",
+                        resourceType : "ALL",
+                    });                    
+                    chartHistory['DBShardGroupACUUtilization'] = dataset['charts'];                 
+
+
+                    dataset = await this.getCloudwatchMetrics({ 
+                        type : "2",                                                                        
+                        metric : 'DBShardGroupCapacity',
+                        period : 1,
+                        interval :  30,
+                        stat : "Average",
+                        resourceType : "ALL",
+                    });                    
+                    chartHistory['DBShardGroupCapacity'] = dataset['charts'];
+            
+            }
+            catch(err){
+                this.#objLog.write("getCloudwatchMetricsTable","err",err);
+            }
+            
+            return { tableMetrics : tableMetrics, tableSummary : tableSummary, chartSummary : chartSummary, chartHistory : chartHistory };
+            
+        }
+
+    }
+
+
+
+module.exports = { classMetrics, classCluster, classNode, classInstance, classRedisEngine, classMongoDBEngine, classPostgresqlEngine, classMysqlEngine, classSqlserverEngine, classOracleEngine, classDocumentDBElasticCluster, classDocumentDBElasticShard, classElasticacheServerlessCluster, classDynamoDB, classAuroraLimitlessPostgresqlEngine };
 

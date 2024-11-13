@@ -154,6 +154,13 @@ Resources:
                             ],
                             "Resource": "arn:aws:rds:${AWS::Region}:${AWS::AccountId}:db:*"
                         },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "rds:DescribeDBShardGroups"
+                            ],
+                            "Resource": "arn:aws:rds:${AWS::Region}:${AWS::AccountId}:shard-group:*"                            
+                         },
                          {
                             "Effect": "Allow",
                             "Action": [

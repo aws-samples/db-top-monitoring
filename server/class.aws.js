@@ -8,7 +8,7 @@ var nodeCatalog = JSON.parse(fs.readFileSync('./aws-node-types.json'));
 //--## AWS Libraries
 const { ElastiCacheClient, DescribeServerlessCachesCommand, DescribeReplicationGroupsCommand } = require("@aws-sdk/client-elasticache");
 const { MemoryDBClient, DescribeClustersCommand } = require("@aws-sdk/client-memorydb");
-const { RDSClient, DescribeDBClustersCommand, DescribeDBInstancesCommand } = require("@aws-sdk/client-rds");
+const { RDSClient, DescribeDBClustersCommand, DescribeDBInstancesCommand, DescribeDBShardGroupsCommand } = require("@aws-sdk/client-rds");
 const { DocDBClient, /*DescribeDBClustersCommand*/ } = require("@aws-sdk/client-docdb"); 
 const { CloudWatchClient, GetMetricDataCommand } = require("@aws-sdk/client-cloudwatch");
 const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-cloudwatch-logs");
@@ -16,6 +16,7 @@ const { DocDBElasticClient, GetClusterCommand, ListClustersCommand  } = require(
 const { DynamoDBClient, DescribeTableCommand, ListTablesCommand } = require("@aws-sdk/client-dynamodb");
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts"); 
 const {  BedrockRuntimeClient,  InvokeModelCommand,} = require("@aws-sdk/client-bedrock-runtime");
+
 
 
 //--## AWS Variables
@@ -684,6 +685,48 @@ class classAWS {
         }
         
         
+        //-- Get Cluster Object
+        async getAuroraLimitlessClusterObject(clusterId){
+            
+            var parameterCluster = {
+                DBClusterIdentifier: clusterId,
+                MaxRecords: 100
+            };
+
+            var command = new DescribeDBClustersCommand(parameterCluster);
+            const data = await rds.send(command);
+            
+            return data['DBClusters'][0];
+    
+        }
+
+
+        //-- Get Cluster DBShard Object
+        async getAuroraLimitlessDbShardObject(clusterId){
+
+            var parameterCluster = {
+                Filters: [ 
+                    { 
+                      Name: "DBClusterIdentifier",
+                      Values: [clusterId],
+                    },
+                  ],
+            };
+
+            var command = new DescribeDBShardGroupsCommand(parameterCluster);
+            const result = await rds.send(command);
+            var dbShard = {};
+            result.DBShardGroups.forEach(function(shard) {                
+                if(shard['DBClusterIdentifier']==clusterId){
+                    dbShard = {...shard};
+                }
+            });
+            
+            return dbShard;
+    
+        }
+
+
         
         //-- Get DocumentDB Elastic Cluster Info
         async getDocumentDBElasticStatus(clusterId){
@@ -1143,6 +1186,25 @@ class classAWS {
         }
         
         
+
+        //-- getCloudWatchRecords
+        async getCloudWatchRecords(object){
+    
+            var records = [];
+            try {
+                         
+                    const command = new GetLogEventsCommand(object);
+                    records = await cloudwatchlogs.send(command);                    
+                                                
+            }
+            catch(err){
+                console.log(err);                
+            }
+
+            return records;
+            
+        }
+        
         
         //-- getOSMetricsDetail
         async getOSMetricsDetails(object){
@@ -1364,7 +1426,7 @@ class classAWS {
             
             try {
                     
-                        
+                                            
                     //-- Gather Metrics from CloudWatch
                     
                     var dataQueries = [];
