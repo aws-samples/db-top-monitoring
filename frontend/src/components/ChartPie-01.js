@@ -1,7 +1,7 @@
 import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
-const ChartComponent = memo(({ series, labels, title, height="350px", width="100%" }) => {
+const ChartComponent = memo(({ series, labels, title="", height="350px", width="100%" }) => {
       
           
             var options = {
@@ -23,6 +23,17 @@ const ChartComponent = memo(({ series, labels, title, height="350px", width="100
                 monochrome: {
                   enabled: true
                 }
+              },
+              title: {
+                text : title,
+                align: "center",
+                show: false,
+                style: {
+                  fontSize:  '14px',
+                  fontWeight:  'bold',
+                  fontFamily: 'Lato',
+                }
+                
               },
               legend: {
                     show: true,
@@ -71,7 +82,13 @@ const ChartComponent = memo(({ series, labels, title, height="350px", width="100
                                   fontFamily: 'Lato',
                              },
                  },
-              }
+              },
+              dataLabels: {
+                formatter(val, opts) {
+                  const name = opts.w.globals.labels[opts.seriesIndex]
+                  return [name, val.toFixed(1) + '%']
+                },
+              },
             };
             
           

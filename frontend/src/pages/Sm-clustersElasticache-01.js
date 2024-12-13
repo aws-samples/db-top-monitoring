@@ -209,6 +209,10 @@ function Login() {
                             path_name = "/sm-elasticache-02";
                             break;
                           
+                          case "elasticache:valkey-serverless":
+                            path_name = "/sm-elasticache-02";
+                            break;
+                          
                           default:
                              break;
                             
@@ -345,7 +349,7 @@ function Login() {
                                       else
                                           authMode = "modeNonAuth";
                                       
-                                      if ( item['Engine'] == "redis") {
+                                      if ( item['Engine'] == "redis" || item['Engine'] == "valkey" ) {
                                           rdsItems.push({
                                                         identifier : item['ServerlessCacheName'],
                                                         status : item['Status'] ,

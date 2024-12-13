@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 //--############# CLASS : classLogging                                                                                               
 class classLogging {
 
@@ -7,7 +9,7 @@ class classLogging {
         }
           
           
-        //-- Open Connection
+        //-- Write log to screen
         write(module,type,message) { 
             var timestamp = new Date();
             console.log({ time : timestamp.toTimeString().split(' ')[0],
@@ -18,6 +20,20 @@ class classLogging {
                            message : message
                         });
         }
+
+        //-- Debug, write to file
+        debug(module,type,message) { 
+            
+            var content = "\n" + JSON.stringify({ time : (new Date()).toTimeString(), module : module, type : type, message : message }); 
+            fs.appendFile('debug.log', content, (err) => {
+                if (err) {
+                    console.error('Error appending to file:', err);
+                    return;
+                }
+            });
+            
+        }  
+
 }
 
 

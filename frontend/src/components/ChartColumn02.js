@@ -1,11 +1,9 @@
+import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
-function ChartBar({ series, height, width="100%", title }) {
+const ChartBar = memo(({ series, categories, height, width="100%", title }) => {
 
-    var   data = [{
-              data: series.data
-            }];
-
+    console.log(series,categories);
     var options = {
               chart: {
                 type: 'bar',
@@ -17,7 +15,7 @@ function ChartBar({ series, height, width="100%", title }) {
                 animations: {
                     enabled: false,
                 },
-                labels: series.categories,
+                labels: JSON.parse(categories),
                 dynamicAnimation :
                 {
                     enabled: true,
@@ -33,7 +31,7 @@ function ChartBar({ series, height, width="100%", title }) {
                 }
               },
               xaxis: {
-                //categories: series.categories,
+                categories: JSON.parse(categories),
                 labels : {
                             formatter: function(val, index) {
                                         
@@ -94,9 +92,9 @@ function ChartBar({ series, height, width="100%", title }) {
     
     return (
             <div>
-                <Chart options={options} series={data} type="bar" width={width} height={height} />
+                <Chart options={options} series={JSON.parse(series)} type="bar" width={width} height={height} />
             </div>
            );
-}
+});
 
 export default ChartBar;

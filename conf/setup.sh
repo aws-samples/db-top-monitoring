@@ -42,7 +42,7 @@ cd /aws/apps/server/; wget https://truststore.pki.rds.amazonaws.com/global/globa
 curl https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh --output install.sh
 sh install.sh
 . ~/.nvm/nvm.sh
-nvm install 20.11.0
+nvm install 23.4.0
 
 
 #NodeJS API Core Installation

@@ -30,6 +30,7 @@ import SmElasticache02 from "./pages/Sm-elasticache-02";
 import SmMemoryDB01 from "./pages/Sm-memorydb-01";
 import SmAuroraMysql01 from "./pages/Sm-aurora-mysql-01";
 import SmAuroraPostgresql01 from "./pages/Sm-aurora-postgresql-01";
+import SmAuroraPostgresql02 from "./pages/Sm-aurora-postgresql-02";
 import SmDocumentDB01 from "./pages/Sm-documentdb-01";
 import SmDocumentDB02 from "./pages/Sm-documentdb-02";
 import SmTablesDynamoDB01 from "./pages/Sm-tablesDynamoDB-01";
@@ -91,6 +92,7 @@ Axios.get(`/aws-exports.json`,).then((data)=>{
                     <Route path="/sm-memorydb-01" element={<ProtectedApp><ProtectedDb> <SmMemoryDB01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-aurora-mysql-01" element={<ProtectedApp><ProtectedDb> <SmAuroraMysql01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-aurora-postgresql-01" element={<ProtectedApp><ProtectedDb> <SmAuroraPostgresql01 /></ProtectedDb> </ProtectedApp>} />
+                    <Route path="/sm-aurora-postgresql-02" element={<ProtectedApp><ProtectedDb> <SmAuroraPostgresql02 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-documentdb-01" element={<ProtectedApp><ProtectedDb> <SmDocumentDB01 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-documentdb-02" element={<ProtectedApp><ProtectedDb> <SmDocumentDB02 /></ProtectedDb> </ProtectedApp>} />
                     <Route path="/sm-dynamodb-01" element={<ProtectedApp> <SmDynamoDB01 /></ProtectedApp>} />

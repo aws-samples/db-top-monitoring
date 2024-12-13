@@ -134,7 +134,10 @@ function Login() {
             switch (selectedItems[0]['engine']){
               
                 case "aurora-postgresql":
-                      engine="postgresql";
+                      if (!(String(selectedItems[0]['version']).includes("limitless")))
+                          engine="postgresql";
+                      else
+                          engine="postgresql/limitless";
                       break;
                       
                 case "aurora-mysql":
@@ -189,8 +192,11 @@ function Login() {
                             break;
                             
                           case "aurora-postgresql":
-                            path_name = "/sm-aurora-postgresql-01";
-                            break;
+                            if (!(String(selectedItems[0]['version']).includes("limitless")))
+                                path_name = "/sm-aurora-postgresql-01";
+                            else
+                                path_name = "/sm-aurora-postgresql-02";
+                            break;                          
                           
                           default:
                              break;
