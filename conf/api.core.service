@@ -9,7 +9,7 @@ Environment=NODE_PORT=3002
 Type=simple
 User=ec2-user
 WorkingDirectory=/aws/apps/server/
-ExecStart=/home/ec2-user/.nvm/versions/node/v20.11.0/bin/node api.core.js
+ExecStart=/home/ec2-user/.nvm/versions/node/v23.4.0/bin/node api.core.js
 Restart=on-failure
 RestartSec=5s
 

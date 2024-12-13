@@ -19,7 +19,7 @@ import Header from "@cloudscape-design/components/header";
 import Container from "@cloudscape-design/components/container";
 import CompMetric01  from '../components/Metric01';
 import ChartLine02  from '../components/ChartLine02';
-import ChartColumn01 from '../components/ChartColumn01';
+import ChartColumn02 from '../components/ChartColumn02';
 import Animation01 from '../components/Animation01';
 import ChartLine04  from '../components/ChartLine04';
 import AuroraLimitlessNode from '../components/CompAuroraLimitlessNode01';
@@ -28,9 +28,9 @@ import ChartBar03  from '../components/ChartBar03';
 import ChartPie01  from '../components/ChartPie-01';
 import ChartRadialBar01  from '../components/ChartRadialBar01';
 
-
 import { createLabelFunction, customFormatNumberLong, customFormatNumber, customFormatNumberShort } from '../components/Functions';
 import CustomTable02 from "../components/Table02";
+
 
 export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
   preferencesTitle: 'Split panel preferences',
@@ -48,6 +48,7 @@ export const splitPanelI18nStrings: SplitPanelProps.I18nStrings = {
 var CryptoJS = require("crypto-js");
 
 function App() {
+    
     
     //-- Connection Usage
     const [connectionMessage, setConnectionMessage] = useState([]);
@@ -171,12 +172,26 @@ function App() {
                                                                             summary : { total : 0, average : 0, min : 0, max : 0, count : 0  }, 
                                                                             currentState : { 
                                                                                                 chart : { 
-                                                                                                            categories : [], 
-                                                                                                            data : [] }, 
+                                                                                                            categories : new Array("-", "-"), 
+                                                                                                            data : new Array(0 , 0) },                                                                                                         
                                                                                                             value : 0 
                                                                                                         } 
                                                                     });
+    
 
+    const [shardCloudwatchMetricAnalytics,setShardCloudwatchMetricAnalytics] = useState({ 
+                                                                            labels : [], 
+                                                                            values : [], 
+                                                                            charts : [], 
+                                                                            summary : { total : 0, average : 0, min : 0, max : 0, count : 0  }, 
+                                                                            currentState : { 
+                                                                                                chart : { 
+                                                                                                            categories : new Array("-", "-"), 
+                                                                                                            data : new Array(0 , 0) },                                                                                                         
+                                                                                                            value : 0 
+                                                                                                        } 
+                                                                    });
+    
     
     //--Cloudwatch Metrics
     const [selectedOptionInterval,setSelectedOptionInterval] = useState({label: "1 Hour",value: 1});
@@ -306,12 +321,13 @@ function App() {
     //-- Function Cluster Gather Stats
     async function gatherClusterStats() {
         
+     //-- API CALL 1
+        var localClusterStats = {};
         if ( currentTabId.current == "tab01" || currentTabId.current == "tab02" || currentTabId.current == "tab03" ) {
         
         
-                var api_url = configuration["apps-settings"]["api_url"];
-                
-                Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/gather/stats/`,{
+                var api_url = configuration["apps-settings"]["api_url"];                
+                await Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/gather/stats/`,{
                               params: { connectionId : cnf_connection_id, 
                                         clusterId : cnf_identifier,     
                                         engineType : cnf_engine                              
@@ -319,7 +335,9 @@ function App() {
                           }).then((data)=>{
                            
                            var info = data.data.cluster;
-                           setClusterStats({ cluster : {...info} });
+                           localClusterStats = { cluster : {...info} };
+
+                           //setClusterStats({ cluster : {...info} });
                              
                       })
                       .catch((err) => {
@@ -329,130 +347,143 @@ function App() {
                       });
               
         }
-        
-    }
 
-
-    //-- Function Gather Metric Details
-    async function gatherClusterStatsDetails() {
-        
-      if ( currentTabId.current == "tab01" && splitPanelIsShow.current === true ) {
+        //-- API CALL 2
+        var localClusterStatsDetails = {};
+        if ( currentTabId.current == "tab01" && splitPanelIsShow.current === true ) {
       
               
-              var api_url = configuration["apps-settings"]["api_url"];
-              
-              Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/gather/stats/details`,{
-                            params: { connectionId : cnf_connection_id, 
-                                      clusterId : cnf_identifier, 
-                                      engineType : cnf_engine,                   
-                                      metricId :  metricCurrent.current['metricId']
-                            }
-                        }).then((data)=>{                         
-                        setClusterStatsDetails({ ...data.data });                        
-                    })
-                    .catch((err) => {
-                        console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/gather/stats/details' );
-                        console.log(err);
-                        
-                    });
+            var api_url = configuration["apps-settings"]["api_url"];
             
-        }
-    }
-
-
-
-    //-- Function Gather Cloudwatch Shard Metrics 
-    async function gatherCloudwatchShardMetrics() {
- 
-      if ( currentTabId.current == "tab03" ) {
-              var api_url = configuration["apps-settings"]["api_url"];
-              
-              Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics`,{
-                            params: { connectionId : cnf_connection_id, 
-                                      clusterId : cnf_identifier, 
-                                      engineType : cnf_engine,                   
-                                      type :  cloudwatchMetric.current.type,
-                                      metric :  cloudwatchMetric.current.name,
-                                      period : 1,
-                                      interval : optionInterval.current * 60,
-                                      stat : "Average",
-                                      resourceType : optionType.current,
-                            }
-                        }).then((data)=>{     
-                        setShardCloudwatchMetric({... data.data });                                            
-                    })
-                    .catch((err) => {
-                        console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics' );
-                        console.log(err);                        
-                    });     
-      
-      }      
-        
-    }
-
-
-    //-- Function Gather Cloudwatch Metrics Table
-    async function gatherCloudwatchMetricsTable() {
- 
-        if ( currentTabId.current == "tab02" ) {
-                var api_url = configuration["apps-settings"]["api_url"];
-                
-                Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics/table`,{
-                              params: { connectionId : cnf_connection_id, 
-                                        clusterId : cnf_identifier, 
-                                        engineType : cnf_engine,                                                           
-                              }
-                          }).then((data)=>{     
-                            setShardMetrics({... data.data });                                              
-                      })
-                      .catch((err) => {
-                          console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics/table' );
-                          console.log(err);                        
-                      });     
-        
-        }      
-          
-    }
-
-
-    //-- Function Gather Cloudwatch Shard Metrics 
-    async function gatherCloudwatchDashboardDetails() {
- 
-        if ( currentTabId.current == "tab02" && splitPanelIsShow.current === true ) {
-                var api_url = configuration["apps-settings"]["api_url"];
-                
-                Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics`,{
-                              params: { connectionId : cnf_connection_id, 
-                                        clusterId : cnf_identifier, 
-                                        engineType : cnf_engine,                   
-                                        type :  "1",
-                                        metric :  metricName.current,
-                                        period : 1,
-                                        interval : 30,
-                                        stat : "Average",
-                                        resourceType : "ALL",
-                              }
-                          }).then((data)=>{     
-                          setShardCloudwatchMetric({... data.data });                                            
-                      })
-                      .catch((err) => {
-                          console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics' );
-                          console.log(err);                        
-                      });     
-        
-        }      
+            await Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/gather/stats/details`,{
+                          params: { connectionId : cnf_connection_id, 
+                                    clusterId : cnf_identifier, 
+                                    engineType : cnf_engine,                   
+                                    metricId :  metricCurrent.current['metricId']
+                          }
+                      }).then((data)=>{                         
+                      //setClusterStatsDetails({ ...data.data });                        
+                      localClusterStatsDetails = { ...data.data };
+                  })
+                  .catch((err) => {
+                      console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/gather/stats/details' );
+                      console.log(err);
+                      
+                  });
           
       }
-  
+
+
+      
+        //-- API CALL 3        
+        var localShardCloudwatchMetricAnalytics = {};
+        if ( currentTabId.current == "tab03" ) {
+            
+            var api_url = configuration["apps-settings"]["api_url"];            
+
+            await Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics`,{
+                        params: { connectionId : cnf_connection_id, 
+                                    clusterId : cnf_identifier, 
+                                    engineType : cnf_engine,                   
+                                    type :  cloudwatchMetric.current.type,
+                                    metric :  cloudwatchMetric.current.name,
+                                    period : 1,
+                                    interval : optionInterval.current * 60,
+                                    stat : "Average",
+                                    resourceType : optionType.current,
+                        }
+                    }).then((data)=>{                        
+                    
+                    //setShardCloudwatchMetric({... data.data });                                                
+                    localShardCloudwatchMetricAnalytics = {... data.data };
+                    
+                })
+                .catch((err) => {
+                    console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics' );
+                    console.log(err);                        
+                });     
+
+        }   
+
+      
+        //-- API CALL : 4
+        var localShardMetrics = {};
+        if ( currentTabId.current == "tab02" ) {
+            var api_url = configuration["apps-settings"]["api_url"];
+            
+            await Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics/table`,{
+                          params: { connectionId : cnf_connection_id, 
+                                    clusterId : cnf_identifier, 
+                                    engineType : cnf_engine,                                                           
+                          }
+                      }).then((data)=>{     
+                        
+                        //setShardMetrics({... data.data });                                              
+                        localShardMetrics = {... data.data };
+                  })
+                  .catch((err) => {
+                      console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics/table' );
+                      console.log(err);                        
+                  });     
+    
+        }      
+
+      
+        //-- API CALL 5
+        var localShardCloudwatchMetric = {};     
+        if ( currentTabId.current == "tab02" && splitPanelIsShow.current === true ) {
+            var api_url = configuration["apps-settings"]["api_url"];
+            
+            await Axios.get(`${api_url}/api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics`,{
+                          params: { connectionId : cnf_connection_id, 
+                                    clusterId : cnf_identifier, 
+                                    engineType : cnf_engine,                   
+                                    type :  "1",
+                                    metric :  metricName.current,
+                                    period : 1,
+                                    interval : 30,
+                                    stat : "Average",
+                                    resourceType : "ALL",
+                          }
+                      }).then((data)=>{     
+                      //setShardCloudwatchMetric({... data.data });   
+                      localShardCloudwatchMetric = {... data.data };                         
+                  })
+                  .catch((err) => {
+                      console.log('Timeout API Call : /api/aurora/cluster/postgresql/limitless/shard/gather/cloudwatch/metrics' );
+                      console.log(err);                        
+                  });     
+    
+        }
+
+
+
+        if (Object.keys(localClusterStats).length > 0)
+            setClusterStats(localClusterStats);
+
+        if (Object.keys(localClusterStatsDetails).length > 0)
+            setClusterStatsDetails(localClusterStatsDetails);
+        
+        if (Object.keys(localShardCloudwatchMetricAnalytics).length > 0)
+            setShardCloudwatchMetricAnalytics(localShardCloudwatchMetricAnalytics);
+        
+        if (Object.keys(localShardMetrics).length > 0)
+            setShardMetrics(localShardMetrics);
+        
+        if (Object.keys(localShardCloudwatchMetric).length > 0)
+            setShardCloudwatchMetric(localShardCloudwatchMetric);
+        
+        
+        
+        
+
+
+    }
 
 
     //-- Gather all stats
     function gatherGlobalStats(){
         gatherClusterStats();
-        gatherClusterStatsDetails();
-        gatherCloudwatchShardMetrics();
-        gatherCloudwatchMetricsTable();
-        gatherCloudwatchDashboardDetails();
     }
 
 
@@ -461,7 +492,7 @@ function App() {
         metricName.current = object.metricName;
         splitPanelIsShow.current = true;
         setsplitPanelShow(true);
-        gatherCloudwatchDashboardDetails();        
+        gatherClusterStats();      
 
     }
     
@@ -515,16 +546,16 @@ function App() {
     
 
     useEffect(() => {
-        openClusterConnection();        
+        openClusterConnection();                     
     }, []);
     
     
-    useEffect(() => {
+    useEffect(() => {        
         const id = setInterval(gatherGlobalStats, configuration["apps-settings"]["refresh-interval-documentdb-metrics"]);
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
-    
+
 
   return (
     <div style={{"background-color": "#121b29"}}>
@@ -719,10 +750,12 @@ function App() {
                             <Tabs
                                     disableContentPaddings
                                     onChange={({ detail }) => {
-                                          setActiveTabId(detail.activeTabId);
+                                          
                                           currentTabId.current=detail.activeTabId;
+                                          setActiveTabId(detail.activeTabId);                                          
                                           setsplitPanelShow(false);
                                           gatherGlobalStats();
+
                                       }
                                     }
                                     activeTabId={activeTabId}
@@ -938,7 +971,7 @@ function App() {
                                                                                                                   metricCurrent.current = detail;
                                                                                                                   splitPanelIsShow.current = true;
                                                                                                                   setsplitPanelShow(true);                                                                                                                                                                                                                                    
-                                                                                                                  gatherClusterStatsDetails();
+                                                                                                                  gatherGlobalStats();
                                                                                                               }
                                                                                                             }
                                                                                                         />
@@ -1012,7 +1045,7 @@ function App() {
                                                                                                                 metricCurrent.current = detail;
                                                                                                                 splitPanelIsShow.current = true;
                                                                                                                 setsplitPanelShow(true);                                                                                                                                                                                                                                    
-                                                                                                                gatherClusterStatsDetails();
+                                                                                                                gatherGlobalStats();
                                                                                                                 }
                                                                                                               }
                                                                                                           />
@@ -1062,7 +1095,7 @@ function App() {
                                                                 <td valign="middle" style={{ "width":"10%", "padding": "0em", "text-align" : "right"}}>                                                                 
                                                                         <CompMetric01 
                                                                                 value={ shardMetrics['chartHistory']?.['DBShardGroupACUUtilization']?.[0]?.['data']?.[0]?.[1] || 0 }
-                                                                                title={"DBShardGroupACUUtilization"}
+                                                                                title={"DBShardGroupACUUtilization(%)"}
                                                                                 precision={0}
                                                                                 format={3}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
@@ -1074,14 +1107,14 @@ function App() {
                                                                                 <ChartBar01 series={JSON.stringify(
                                                                                         shardMetrics['chartHistory']?.['DBShardGroupACUUtilization']
                                                                                         )} 
-                                                                                        title="DBShardGroupACUUtilization"
+                                                                                        title="DBShardGroupACUUtilization(%)"
                                                                                         height="220px"                                                                                 
                                                                                 />                                                                                                                                                            
                                                                 </td>   
                                                                 <td valign="middle" style={{ "width":"10%", "padding": "0em", "text-align" : "right"}}>                                                                 
                                                                         <CompMetric01 
                                                                                 value={ shardMetrics['chartHistory']?.['DBShardGroupCapacity']?.[0]?.['data']?.[0]?.[1] || 0 }
-                                                                                title={"DBShardGroupCapacity"}
+                                                                                title={"DBShardGroupCapacity(Units)"}
                                                                                 precision={0}
                                                                                 format={3}
                                                                                 fontColorValue={configuration.colors.fonts.metric100}
@@ -1093,7 +1126,7 @@ function App() {
                                                                                 <ChartBar01 series={JSON.stringify(
                                                                                         shardMetrics['chartHistory']?.['DBShardGroupCapacity']
                                                                                         )} 
-                                                                                        title="DBShardGroupCapacity"
+                                                                                        title="DBShardGroupCapacity(Units)"
                                                                                         height="220px"                                                                                 
                                                                                 />       
                                                                                                                                                     
@@ -1314,8 +1347,8 @@ function App() {
                                                                                     selectedOption={selectedCloudWatchMetric}
                                                                                     onChange={({ detail }) => {
                                                                                             cloudwatchMetric.current = { type : detail.selectedOption.type, name : detail.selectedOption.value, descriptions : detail.selectedOption.descriptions, unit : detail.selectedOption.unit };
-                                                                                            setSelectedCloudWatchMetric(detail.selectedOption);
-                                                                                            gatherCloudwatchShardMetrics();
+                                                                                            setSelectedCloudWatchMetric(detail.selectedOption);                                                                                            
+                                                                                            gatherGlobalStats();
                                                                                     }
                                                                                     }
                                                                                     options={cloudwatchMetrics}
@@ -1334,8 +1367,8 @@ function App() {
                                                                             selectedOption={selectedOptionInterval}
                                                                             onChange={({ detail }) => {
                                                                                     optionInterval.current = detail.selectedOption.value;
-                                                                                    setSelectedOptionInterval(detail.selectedOption);
-                                                                                    gatherCloudwatchShardMetrics();
+                                                                                    setSelectedOptionInterval(detail.selectedOption);                                                                                    
+                                                                                    gatherGlobalStats();
                                                                             }}
                                                                             options={[
                                                                                 { label: "Last hour", value: 1 },
@@ -1361,7 +1394,7 @@ function App() {
                                                                             onChange={({ detail }) => {
                                                                                     optionType.current = detail.selectedOption.value;
                                                                                     setSelectedOptionType(detail.selectedOption);
-                                                                                    gatherCloudwatchShardMetrics();
+                                                                                    gatherGlobalStats();
                                                                             }}
                                                                             options={[
                                                                                 { label: "Shards + Routers", value: "ALL" },
@@ -1396,23 +1429,34 @@ function App() {
                                                                     
                                                                     <br/>   
                                                                     <div style={{ "text-align": "center" }}>
+                                                                    
+                                                                         
+                                                                    {/*                                                                                                    
+                                                                    <ChartColumn02 
+                                                                        series={ JSON.stringify([ { data : shardCloudwatchMetricAnalytics['currentState']?.['chart']?.['data'] } ] ) }
+                                                                        categories={ JSON.stringify(shardCloudwatchMetricAnalytics['currentState']?.['chart']?.['categories']) }                                                                     
+                                                                        height="435px"                                                               
+                                                                    />         
+                                                                    */}
+                                                                    <ChartPie01 
+                                                                        height="450px" 
+                                                                        width="100%" 
+                                                                        series = {shardCloudwatchMetricAnalytics['currentState']?.['chart']?.['data']}
+                                                                        labels = {shardCloudwatchMetricAnalytics['currentState']?.['chart']?.['categories']}
+                                                                        onClickEvent={() => {}}
+                                                                    />    
+                                                                    <br/>     
+                                                                    <br/>  
                                                                     <CompMetric01 
-                                                                        value={ shardCloudwatchMetric['currentState']?.['value'] || 0 }
+                                                                        value={ shardCloudwatchMetricAnalytics['currentState']?.['value'] || 0 }
                                                                         title={ cloudwatchMetric.current.name + " (" +  cloudwatchMetric.current.unit + ")"}
                                                                         precision={0}
                                                                         format={3}
                                                                         fontColorValue={configuration.colors.fonts.metric100}
                                                                         fontSizeValue={"30px"}
                                                                         fontSizeTitle={"12px"}
-                                                                    />  
-                                                                    <br/>                                                                    
-                                                                    <ChartColumn01 
-                                                                        series = {{ 
-                                                                                data : shardCloudwatchMetric['currentState']?.['chart']?.['data'], 
-                                                                                categories : shardCloudwatchMetric['currentState']?.['chart']?.['categories']
-                                                                            }}     
-                                                                        height="435px"                                                               
-                                                                    />  
+                                                                    />      
+                                                                    <br/>                                           
                                                                     </div>                                                            
                                                                       
                                                                 </Container>
@@ -1432,7 +1476,7 @@ function App() {
                                                                         <tr>                                                      
                                                                             <td valign="top" style={{ "width":"20%","text-align": "center" }}>
                                                                                 <CompMetric01 
-                                                                                    value={ shardCloudwatchMetric['summary']?.['average'] || 0 }
+                                                                                    value={ shardCloudwatchMetricAnalytics['summary']?.['average'] || 0 }
                                                                                     title={"Average"}
                                                                                     precision={2}
                                                                                     format={3}
@@ -1443,7 +1487,7 @@ function App() {
                                                                             </td>                                                            
                                                                             <td valign="top" style={{ "width":"20%","text-align": "center"}}>
                                                                                 <CompMetric01 
-                                                                                    value={ shardCloudwatchMetric['summary']?.['max'] || 0 }
+                                                                                    value={ shardCloudwatchMetricAnalytics['summary']?.['max'] || 0 }
                                                                                     title={"Maximum"}
                                                                                     precision={2}
                                                                                     format={3}
@@ -1455,7 +1499,7 @@ function App() {
                                                                             
                                                                             <td valign="top" style={{ "width":"20%","text-align": "center"}}>
                                                                                 <CompMetric01 
-                                                                                    value={ shardCloudwatchMetric['summary']?.['min']|| 0 }
+                                                                                    value={ shardCloudwatchMetricAnalytics['summary']?.['min']|| 0 }
                                                                                     title={"Minimum"}
                                                                                     precision={2}
                                                                                     format={3}
@@ -1466,7 +1510,7 @@ function App() {
                                                                             </td>         
                                                                             <td valign="top" style={{ "width":"20%","text-align": "center"}}>
                                                                                 <CompMetric01 
-                                                                                    value={ shardCloudwatchMetric['summary']?.['count'] || 0 }
+                                                                                    value={ shardCloudwatchMetricAnalytics['summary']?.['count'] || 0 }
                                                                                     title={"DataPoints"}
                                                                                     precision={0}
                                                                                     format={3}
@@ -1477,7 +1521,7 @@ function App() {
                                                                             </td>                                                                                                               
                                                                             <td valign="top" style={{ "width":"20%","text-align": "center"}}>
                                                                                 <CompMetric01 
-                                                                                    value={ shardCloudwatchMetric['summary']?.['total'] || 0 }
+                                                                                    value={ shardCloudwatchMetricAnalytics['summary']?.['total'] || 0 }
                                                                                     title={"Total"}
                                                                                     precision={0}
                                                                                     format={4}
@@ -1496,13 +1540,13 @@ function App() {
                                                                                 <ChartPie01 
                                                                                             height="450px" 
                                                                                             width="100%" 
-                                                                                            series = {shardCloudwatchMetric['values']}
-                                                                                            labels = {shardCloudwatchMetric['labels']}
+                                                                                            series = {shardCloudwatchMetricAnalytics['values']}
+                                                                                            labels = {shardCloudwatchMetricAnalytics['labels']}
                                                                                             onClickEvent={() => {}}
                                                                                 />
                                                                             </td>
                                                                             <td valign="top" style={{"width": "80%", "padding-right": "2em"}}>    
-                                                                                <ChartLine04 series={JSON.stringify(shardCloudwatchMetric['charts'])}
+                                                                                <ChartLine04 series={JSON.stringify(shardCloudwatchMetricAnalytics['charts'])}
                                                                                     title={cloudwatchMetric.current.name} 
                                                                                     height="400px" 
                                                                                 />

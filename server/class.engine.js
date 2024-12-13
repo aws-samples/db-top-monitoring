@@ -1489,6 +1489,7 @@ class classMongoDBEngine {
             
         }
         
+
         async getActiveSessions(){
             
             try {
@@ -1510,6 +1511,48 @@ class classMongoDBEngine {
             
         }
         
+
+
+        //-- Gather Cloudwatch metrics
+        async getCloudwatchMetrics(object){
+            
+            var result = {                 
+                charts : [],                           
+            };
+
+            try {
+                    var metrics = [      
+                                    {
+                                        namespace : "AWS/DocDB",
+                                        label : this.objectConnection.instanceId,
+                                        metric : object.metric,
+                                        dimension : this.#dimension,
+                                        stat : object.stat                    
+                                    }
+                    ];
+                    
+                    var dataset = await AWSObject.getGenericMetricsDataset({ metrics : metrics, interval : object.interval, period : object.period });
+                    var charts = [];
+
+                    dataset.forEach(item => {                  
+                            var dataRecords = item.Timestamps.map((value, index) => {   
+                                return [item.Timestamps[index], item.Values[index] ];                             
+                            });
+                            charts.push({ name : item.Label, data : dataRecords });                                                      
+
+                    });
+                    
+                    result = { charts : charts };
+
+
+            }
+            catch(err){
+                this.#objLog.write("getCloudwatchMetrics","err",err);
+            }
+            
+            return result;
+
+        }
           
 }
 
