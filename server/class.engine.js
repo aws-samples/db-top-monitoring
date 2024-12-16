@@ -4626,7 +4626,7 @@ class classAuroraLimitlessPostgresqlEngine {
 
             //-- Gather instances ids from CloudWatch
             var result = await AWSObject.getGenericMetricsInsight({ 
-                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = 'aur-pgs-limitless-01' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
+                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = '${this.objectProperties.clusterId}' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
                                                             period : 60 * 180, 
                                                             interval : 180
             });
@@ -4680,7 +4680,7 @@ class classAuroraLimitlessPostgresqlEngine {
        
             //-- Gather instances ids from CloudWatch
             var result = await AWSObject.getGenericMetricsInsight({ 
-                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = 'aur-pgs-limitless-01' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
+                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = '${this.objectProperties.clusterId}' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
                                                             period : 60 * 180, 
                                                             interval : 180
             });
