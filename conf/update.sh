@@ -9,6 +9,11 @@ git clone https://github.com/GitHubRepository/db-top-monitoring.git
 cd db-top-monitoring
 sudo cp -r server frontend /aws/apps
 
+#Copy aws-exports.json
+cp /aws/apps/conf/aws-exports.json /aws/apps/frontend/public/
+cp /aws/apps/conf/aws-exports.json /aws/apps/server/
+
+
 #React Application Installation
 cd /aws/apps/frontend/; npm install; npm run build;
 

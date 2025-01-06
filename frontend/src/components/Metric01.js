@@ -1,6 +1,6 @@
 import {memo} from 'react';
 
-const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#2ea597", fontColorValue = "orange" }) => {
+const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px", fontSizeValue = "22px", fontColorTitle = "#2ea597", fontColorValue = "orange", postFix="" }) => {
 
     var counterValue = 0;
     
@@ -71,7 +71,7 @@ const Metric = memo(({ value, title, precision, format=1, fontSizeTitle = "11px"
     return (
             <div>
                 <span style={{"font-size": fontSizeValue, "font-weight": "900","font-family": "Lato" }}>
-                    {counterValue}
+                    {counterValue}{postFix}
                 </span>
                 <br/>
                 <span style={{"font-size": fontSizeTitle,"font-weight": "450","font-family": "Lato", "color": fontColorTitle }}>
