@@ -1,7 +1,7 @@
 import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
-const ChartLine = memo(({series,history, height="60px", width="100%", title, border=2, type="line" }) => {
+const ChartLine = memo(({series, height="60px", width="100%", title, border=2, type="line" }) => {
 
     var options = {
       chart: {

@@ -1625,6 +1625,32 @@ async function gatherClwAuroraPostgresqlLimitlessTable(req, res) {
 
 
 
+//--++ AURORA - POSTGRESQL  - LIMITLESS : Gather Cloudwatch Information
+app.get("/api/aurora/cluster/postgresql/limitless/gather/storage/info", gatherAuroraPostgresqlLimitlessStorageInfo);
+async function gatherAuroraPostgresqlLimitlessStorageInfo(req, res) {
+
+        // Token Validation
+        var standardToken = verifyToken(req.headers['x-token']);
+        var cognitoToken = verifyTokenCognito(req.headers['x-token-cognito']);
+    
+        if (standardToken.isValid === false || cognitoToken.isValid === false)
+            return res.status(511).send({ data: [], message : "Token is invalid. StandardToken : " + String(standardToken.isValid) + ", CognitoToken : " + String(cognitoToken.isValid) });
+
+ 
+        try
+            {
+                var params = req.query;
+                
+                var result = await auroraLimitlessPostgresqlObjectContainer[params.engineType + ":" + params.clusterId].getStorageUsage(params);                                
+                res.status(200).send({ ...result  });
+                
+        }
+        catch(err){
+                console.log(err);
+        }
+}
+
+
 //--++ AURORA - POSTGRESQL  - LIMITLESS : Close Connection
 app.get("/api/aurora/cluster/postgresql/limitless/close/connection/", closeConnectionAuroraPostgresqlLimitlessCluster);
 async function closeConnectionAuroraPostgresqlLimitlessCluster(req, res) {

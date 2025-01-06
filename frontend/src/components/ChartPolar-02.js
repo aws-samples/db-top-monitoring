@@ -1,25 +1,15 @@
 import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
-const ChartComponent = memo(({ series, labels, title="", height="350px", width="100%", onClickEvent }) => {
-      
-            function onClickChart(object){
-                onClickEvent(object);
-            }
-    
+const ChartComponent = memo(({ series, labels, title="", height="350px", width="100%"}) => {      
+          
             var options = {
               chart: {
                 type: 'polarArea',
                 foreColor: '#9e9b9a',
                 zoom: {
                     enabled: true,
-                },
-                events: {
-                    dataPointSelection: function(event, chartContext, config) {
-                        onClickChart({ selectedItem : config.dataPointIndex } );
-                    }
-      
-                },
+                },            
               },
               title: {
                 text : title,
@@ -39,7 +29,7 @@ const ChartComponent = memo(({ series, labels, title="", height="350px", width="
                   enabled: true
                 }
               },
-              labels: labels,
+              labels: JSON.parse(labels),
               stroke: {
                 colors: ['#fff']
               },
@@ -95,7 +85,7 @@ const ChartComponent = memo(({ series, labels, title="", height="350px", width="
           
     return (
             <div>
-                <Chart options={options} series={series} type="polarArea" height={height} width={width} />
+                <Chart options={options} series={JSON.parse(series)} type="polarArea" height={height} width={width} />
             </div>
            );
 });

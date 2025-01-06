@@ -4311,6 +4311,34 @@ class classAuroraLimitlessPostgresqlEngine {
                             query_start asc limit 10;
     `;
 
+    #sql_storage_global_usage = `
+                        SELECT 
+                            a.subcluster_id,
+                            a.subcluster_type,
+                            sum(a.db_size) db_size
+                        FROM                             
+                            rds_aurora.limitless_database b
+                            cross join
+                            rds_aurora.limitless_stat_database_size(b.datname) a
+                        GROUP BY 
+                            a.subcluster_id,
+                            a.subcluster_type
+                        ORDER BY 3 DESC
+    `;
+
+    #sql_storage_db_usage = `
+                        SELECT 
+                            b.datname,
+                            sum(a.db_size) db_size
+                        FROM                             
+                            rds_aurora.limitless_database b
+                            cross join
+                            rds_aurora.limitless_stat_database_size(b.datname) a
+                        GROUP BY 
+                            b.datname
+                        ORDER BY 2 DESC
+    `;
+
     #objectMetrics = [];
     #cluster = { 
                 metrics : { global : {}, routers : {}, shards : {} } ,
@@ -4328,15 +4356,23 @@ class classAuroraLimitlessPostgresqlEngine {
                     'BufferCacheHitRatio',
                     'CommitLatency',
                     'CommitThroughput',
+                    'DBLoad',
+                    'DBLoadCPU',
+                    'DBLoadNonCPU',
+                    'DBLoadRelativeToNumVCPUs',
+                    'Deadlocks',                    
+                    'MaximumUsedTransactionIDs',
                     'NetworkReceiveThroughput',
                     'NetworkThroughput',
                     'NetworkTransmitThroughput',
+                    'RDSToAuroraPostgreSQLReplicaLag',
                     'ReadIOPS',
                     'ReadLatency',
                     'ReadThroughput',
                     'StorageNetworkReceiveThroughput',
                     'StorageNetworkThroughput',
                     'StorageNetworkTransmitThroughput',
+                    'SwapUsage',
                     'TempStorageIOPS',
                     'TempStorageThroughput',
                     'WriteIOPS',
@@ -4345,6 +4381,7 @@ class classAuroraLimitlessPostgresqlEngine {
     ];
 
     
+
 
 
     //-- Constructor method
@@ -4626,9 +4663,9 @@ class classAuroraLimitlessPostgresqlEngine {
 
             //-- Gather instances ids from CloudWatch
             var result = await AWSObject.getGenericMetricsInsight({ 
-                                                            sqlQuery : `SELECT AVG(DBLoad) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = '${this.objectProperties.clusterId}' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
-                                                            period : 60 * 180, 
-                                                            interval : 180
+                                                            sqlQuery : `SELECT AVG(CommitThroughput) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = '${this.objectProperties.clusterId}' GROUP BY DBShardGroupSubClusterIdentifier,DBShardGroupInstanceIdentifier`, 
+                                                            period : 60, 
+                                                            interval : 5
             });
             
             
@@ -4656,7 +4693,8 @@ class classAuroraLimitlessPostgresqlEngine {
                                                                 codeType : item['subcluster_type']=="shard" ? "DAS" : "DTR" , 
                                                                 subClusterId : item['subcluster_id'],                                                                  
                                                                 subInstanceId : this.#subClustersIds[item['subcluster_id']]?.['subInstanceId'], 
-                                                                metrics : new classMetrics({ metrics : this.objectMetrics }) 
+                                                                metrics : new classMetrics({ metrics : this.objectMetrics }),
+                                                                name : (item['subcluster_type']=="shard" ? "DAS" : "DTR") + "-" + item['subcluster_id'] + "-" + this.#subClustersIds[item['subcluster_id']]?.['subInstanceId']
                                                             } 
                     } ;
                 }                   
@@ -4710,7 +4748,8 @@ class classAuroraLimitlessPostgresqlEngine {
                                                                 codeType : item['subcluster_type']=="shard" ? "DAS" : "DTR" , 
                                                                 subClusterId : item['subcluster_id'],                                                                  
                                                                 subInstanceId : this.#subClustersIds[item['subcluster_id']]?.['subInstanceId'], 
-                                                                metrics : new classMetrics({ metrics : this.objectMetrics }) 
+                                                                metrics : new classMetrics({ metrics : this.objectMetrics }),
+                                                                name : (item['subcluster_type']=="shard" ? "DAS" : "DTR") + "-" + item['subcluster_id'] + "-" + this.#subClustersIds[item['subcluster_id']]?.['subInstanceId']
                                                             } 
                     } ;
                 }              
@@ -4732,17 +4771,21 @@ class classAuroraLimitlessPostgresqlEngine {
         var routers = [];
         var chartSummary = { categories : [], data : [] } ;
         var chartRaw = [];
+        var indexShard = 0;
+        var indexRouter = 0;
         try {
                 for (let shardId of Object.keys(this.#shards)) {                                         
                     if (this.#shards[shardId].type == "shard"){
                         shards.push({ ...this.#shards[shardId],
-                            metrics : this.#shards[shardId].metrics.getMetricList(), 
+                            ...this.#shards[shardId].metrics.getMetricList(), indexId : indexShard
                         });
+                        indexShard++;
                     }
                     else{
                         routers.push({ ...this.#shards[shardId],
-                            metrics : this.#shards[shardId].metrics.getMetricList(),
+                            ...this.#shards[shardId].metrics.getMetricList(), indexId : indexRouter
                         });
+                        indexRouter++;
                     }                    
                     
                     chartRaw.push({ 
@@ -4818,6 +4861,7 @@ class classAuroraLimitlessPostgresqlEngine {
                             labels : [], 
                             values : [], 
                             charts : [], 
+                            chartGlobal : [], 
                             summary : { total : 0, average : 0, min : 0, max : 0, count : 0  }, 
                             currentState : { 
                                                 chart : { 
@@ -4884,7 +4928,7 @@ class classAuroraLimitlessPostgresqlEngine {
                     case "2":
                             metrics.push({
                                             namespace : "AWS/RDS",
-                                            label : "DBShardGroup-" + this.#shardGroupMetadata['DBShardGroupIdentifier'],
+                                            label : this.#shardGroupMetadata['DBShardGroupIdentifier'],
                                             metric : object.metric,
                                             dimension : [   
                                                             {                                     
@@ -4892,6 +4936,42 @@ class classAuroraLimitlessPostgresqlEngine {
                                                                 "Value" : this.#shardGroupMetadata['DBShardGroupIdentifier'], 
                                                             }
 
+                                                        ],
+                                                    stat : object.stat                    
+                                });
+                    break;
+
+
+                    case "3":
+                            metrics.push({
+                                            namespace : "AWS/RDS",
+                                            label : this.#shardGroupMetadata['DBClusterIdentifier'],
+                                            metric : object.metric,
+                                            dimension : [   
+                                                            {                                     
+                                                                "Name" : "DBClusterIdentifier", 
+                                                                "Value" : this.#shardGroupMetadata['DBClusterIdentifier'],
+                                                            }
+                                                        ],
+                                                    stat : object.stat                    
+                                });
+                    break;
+
+
+                    case "4":
+                            metrics.push({
+                                            namespace : "AWS/RDS",
+                                            label : this.#shardGroupMetadata['DBClusterIdentifier'],
+                                            metric : object.metric,
+                                            dimension : [   
+                                                            {                                     
+                                                                "Name" : "DBClusterIdentifier", 
+                                                                "Value" : this.#shardGroupMetadata['DBClusterIdentifier'],
+                                                            },
+                                                            {                                     
+                                                                "Name" : "DBShardGroupIdentifier", 
+                                                                "Value" : this.#shardGroupMetadata['DBShardGroupIdentifier'], 
+                                                            },
                                                         ],
                                                     stat : object.stat                    
                                 });
@@ -4912,10 +4992,18 @@ class classAuroraLimitlessPostgresqlEngine {
                 var max = [];
                 var min = [];
                 var rawData = [];
+
+                var totalValue = {};
                 dataset.forEach(item => {                  
                     
                     var total = 0;
-                    var dataRecords = item.Timestamps.map((value, index) => {   
+                    var dataRecords = item.Timestamps.map((value, index) => {                           
+                        // Global values
+                        if (!(totalValue.hasOwnProperty(item.Timestamps[index])))
+                            totalValue[item.Timestamps[index]] = 0;      
+                        totalValue[item.Timestamps[index]] = totalValue[item.Timestamps[index]] + item.Values[index];
+
+                        // Item values
                         total = total + item.Values[index];               
                         summary.count = summary.count + 1;                                 
                         return [item.Timestamps[index], item.Values[index] ];                             
@@ -4943,7 +5031,16 @@ class classAuroraLimitlessPostgresqlEngine {
                 summary.max = Math.max(...max);
                 summary.min = Math.max(...min);
                 summary.average = summary.total / summary.count;
-                result = { labels : labels, values : values, charts : charts, summary : summary, currentState : currentState };
+
+                
+                // Data Global
+                var chartGlobal = [];
+                for (let item of Object.keys(totalValue)) { 
+                    chartGlobal.push([item,totalValue[item]]);
+                }
+             
+
+                result = { labels : labels, values : values, charts : charts, chartGlobal : chartGlobal, summary : summary, currentState : currentState };
 
 
             }
@@ -5010,8 +5107,13 @@ class classAuroraLimitlessPostgresqlEngine {
         async getCloudwatchMetricsTable(){
             var tableMetrics = [];
             var tableSummary = {};
-            var chartSummary = { categories : [], data : [] };
-            var chartHistory = { CommitThroughput : [], DBShardGroupACUUtilization : [], DBShardGroupCapacity : []  };
+            var chartSummary = { CommitThroughput : [], DBLoad : [], CommitLatency : []  };
+            var totalShards = 0;
+
+            var chartSummary = { CommitThroughput : { categories : [], data : [] }, DBLoad : { categories : [], data : [] }, CommitLatency : { categories : [], data : [] }  };
+            var chartSummaryRaw = { CommitThroughput : [], DBLoad : [], CommitLatency : []  };
+            var chartHistory = { CommitThroughput : [], DBLoad : [], CommitLatency : [], DBShardGroupACUUtilization : [], DBShardGroupCapacity : []  };
+            var chartGlobal = { CommitThroughput : [], DBLoad : [] };
             try {
                     for (let shardId of Object.keys(this.#shards)) { 
                         
@@ -5029,11 +5131,46 @@ class classAuroraLimitlessPostgresqlEngine {
                         });        
                         
                         tableMetrics.push(columns);  
-                        chartSummary.categories.push(this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId']);                     
-                        chartSummary.data.push(columns['CommitThroughput']);                       
+
+                        chartSummaryRaw['CommitThroughput'].push( { 
+                                                                    name : this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'], 
+                                                                    value : columns['CommitThroughput'] 
+                                                                });                     
+                        chartSummaryRaw['DBLoad'].push( { 
+                            name : this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'], 
+                            value : columns['DBLoad'] 
+                        });                     
+
+                        chartSummaryRaw['CommitLatency'].push( { 
+                            name : this.#shards[shardId]?.['codeType'] + "-" + this.#shards[shardId]?.['subClusterId'] + "-" + this.#shards[shardId]?.['subInstanceId'], 
+                            value : columns['CommitLatency'] 
+                        }); 
+
+                        totalShards++;
+                        
                         
                     }
+                
+                    // Latency adjustment
+                    tableSummary['CommitLatency'] = tableSummary['CommitLatency'] / totalShards;
+                    tableSummary['ReadLatency'] = tableSummary['ReadLatency'] / totalShards;
+                    tableSummary['WriteLatency'] = tableSummary['WriteLatency'] / totalShards;
 
+                    // Sorting charts
+                    chartSummaryRaw['CommitThroughput'].sort((a, b) => b.value - a.value);
+                    chartSummaryRaw['DBLoad'].sort((a, b) => b.value - a.value);
+                    chartSummaryRaw['CommitLatency'].sort((a, b) => b.value - a.value);
+                      
+                    chartSummary['CommitThroughput'].data = chartSummaryRaw['CommitThroughput'].map(item => item.value);
+                    chartSummary['CommitThroughput'].categories = chartSummaryRaw['CommitThroughput'].map(item => item.name);
+
+                    chartSummary['DBLoad'].data = chartSummaryRaw['DBLoad'].map(item => item.value);
+                    chartSummary['DBLoad'].categories = chartSummaryRaw['DBLoad'].map(item => item.name);
+
+                    chartSummary['CommitLatency'].data = chartSummaryRaw['CommitLatency'].map(item => item.value);
+                    chartSummary['CommitLatency'].categories = chartSummaryRaw['CommitLatency'].map(item => item.name);
+
+                    // - Global - CommitThroughput
                     var dataset = await this.getCloudwatchMetrics({ 
                                                                         type : "1",                                                                        
                                                                         metric : 'CommitThroughput',
@@ -5043,6 +5180,64 @@ class classAuroraLimitlessPostgresqlEngine {
                                                                         resourceType : "ALL",
                      });                    
                      chartHistory['CommitThroughput'] = dataset['charts'];                 
+                     chartGlobal['CommitThroughput'] = dataset['chartGlobal']; 
+
+
+                     // Global - CommitLatency
+                     dataset = await this.getCloudwatchMetrics({ 
+                        type : "1",                                                                        
+                        metric : 'CommitLatency',
+                        period : 1,
+                        interval :  30,
+                        stat : "Average",
+                        resourceType : "ALL",
+                    });                    
+                    chartHistory['CommitLatency'] = dataset['charts'];                 
+                    chartGlobal['CommitLatency'] = dataset['chartGlobal']; 
+                    
+                    chartGlobal['CommitLatency'].forEach(function(item, index) {    
+                        chartGlobal['CommitLatency'][index][1] = chartGlobal['CommitLatency'][index][1] / totalShards;                                               
+                    });
+
+                    
+                    // Global - DBLoad
+                    dataset = await this.getCloudwatchMetrics({ 
+                        type : "1",                                                                        
+                        metric : 'DBLoad',
+                        period : 1,
+                        interval :  30,
+                        stat : "Average",
+                        resourceType : "ALL",
+                    });                    
+                    chartHistory['DBLoad'] = dataset['charts'];     
+                    chartGlobal['DBLoad'] = dataset['chartGlobal'];
+
+                    // Global - DBLoadCPU
+                    dataset = await this.getCloudwatchMetrics({ 
+                        type : "1",                                                                        
+                        metric : 'DBLoadCPU',
+                        period : 1,
+                        interval :  30,
+                        stat : "Average",
+                        resourceType : "ALL",
+                    });                    
+                    chartHistory['DBLoadCPU'] = dataset['charts'];     
+                    chartGlobal['DBLoadCPU'] = dataset['chartGlobal'];
+
+
+                    // Global - DBLoadNonCPU
+                    dataset = await this.getCloudwatchMetrics({ 
+                        type : "1",                                                                        
+                        metric : 'DBLoadNonCPU',
+                        period : 1,
+                        interval :  30,
+                        stat : "Average",
+                        resourceType : "ALL",
+                    });                    
+                    chartHistory['DBLoadNonCPU'] = dataset['charts'];     
+                    chartGlobal['DBLoadNonCPU'] = dataset['chartGlobal'];
+
+
 
                      dataset = await this.getCloudwatchMetrics({ 
                         type : "2",                                                                        
@@ -5070,9 +5265,124 @@ class classAuroraLimitlessPostgresqlEngine {
                 this.#objLog.write("getCloudwatchMetricsTable","err",err);
             }
             
-            return { tableMetrics : tableMetrics, tableSummary : tableSummary, chartSummary : chartSummary, chartHistory : chartHistory };
+            return { tableMetrics : tableMetrics, tableSummary : tableSummary, chartSummary : chartSummary, chartHistory : chartHistory, chartGlobal : chartGlobal };
             
         }
+
+
+        async getCloudWatchMetricsGlobal(object){
+
+            var result = {}
+            try {
+                var dataset = await AWSObject.getGenericMetricsInsight({ 
+                    sqlQuery : `SELECT AVG(${object.metric}) FROM \"AWS/RDS\" WHERE DBClusterIdentifier = '${this.objectProperties.clusterId}'`, 
+                    period : 60 * 180, 
+                    interval : 180
+                });
+
+                result = dataset;
+
+            }
+            catch(err){
+                this.#objLog.write("getCloudWatchMetricsGlobal","err",err);
+            }
+            return result;
+
+
+        } 
+
+
+
+         //-- Gather Storage Usage
+        async getStorageUsage(object){
+
+            var result = { chart : { categories : [], series : []}  , table : [], summary : {} };
+            try {            
+                
+                
+                
+
+                var shardStorage = 0;
+                var routerStorage = 0;
+                var totalStorage = 0;
+
+                if (object.type != "database"){      
+                    
+                    //-- Execute storage query     
+                    var dataset = (await this.#connection.query(this.#sql_storage_global_usage)).rows;                  
+                    
+                    dataset.forEach(item => {                             
+                                            
+                        if  (this.#shards.hasOwnProperty(item['subcluster_id']))  {                                                                       
+                                                        
+                            if (object.type == item['subcluster_type'] || object.type == "ALL"){                            
+                                result.chart.categories.push(this.#shards[item['subcluster_id']].name);
+                                result.chart.series.push(item['db_size']);
+                                result.table.push({ name : this.#shards[item['subcluster_id']].name, type : item['subcluster_type'], size : item['db_size'], pct :0 });
+                                totalStorage = totalStorage + parseFloat(item['db_size']);
+                            }   
+                            
+                            if (item['subcluster_type']=='shard')
+                                shardStorage = shardStorage + parseFloat(item['db_size']);
+
+                            if (item['subcluster_type']=='router')
+                                routerStorage = routerStorage + parseFloat(item['db_size']);
+                            
+                        }              
+                    });
+
+                    for (let index=0; index < result.table.length; index++){
+                        result.table[index]['pct'] =  Math.trunc((parseFloat(result.table[index]['size'])/totalStorage)*100);
+                    }
+
+                    
+
+                }
+                else{
+                    
+                    //-- Execute storage query     
+                    var dataset = (await this.#connection.query(this.#sql_storage_db_usage)).rows;                    
+                    
+                    totalStorage = dataset.reduce((n, {db_size}) => n + parseFloat(db_size), 0);
+
+                    dataset.forEach(item => {                                                                         
+                        
+                                result.chart.categories.push(item['datname']);
+                                result.chart.series.push(item['db_size']);
+                                result.table.push({ name : item['datname'], type : 'database', size : item['db_size'], pct : Math.trunc((parseFloat(item['db_size'])/totalStorage)*100) });                           
+                            
+                    });
+
+
+                    
+                    var dataset = (await this.#connection.query(this.#sql_storage_global_usage)).rows;                                         
+                    dataset.forEach(item => {                             
+                       
+                        if (item['subcluster_type']=='shard')
+                                shardStorage = shardStorage + parseFloat(item['db_size']);
+
+                        if (item['subcluster_type']=='router')
+                                routerStorage = routerStorage + parseFloat(item['db_size']);                           
+                       
+                    });
+
+
+                }
+
+                result['summary']['totalStorage'] =  shardStorage + routerStorage;
+                result['summary']['shardStorage'] =  shardStorage ;
+                result['summary']['routerStorage'] =  routerStorage;
+
+            }
+            catch(err){
+                this.#objLog.write("getStorageUsage","err",err);
+            }
+
+            return result;
+
+        }
+
+
 
     }
 

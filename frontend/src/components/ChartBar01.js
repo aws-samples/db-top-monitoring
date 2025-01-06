@@ -2,12 +2,13 @@ import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
 
-const ChartBar = memo(({series,history, height, width="100%", title, colors=[], border=2, timestamp }) => {
+const ChartBar = memo(({series,history, height, width="100%", title, colors=[], border=2, timestamp, stacked=false }) => {
 
     var options = {
               chart: {
                 height: height,
                 type: 'bar',
+                stacked : stacked,
                 foreColor: '#2ea597',
                 zoom: {
                   enabled: false
@@ -32,6 +33,9 @@ const ChartBar = memo(({series,history, height, width="100%", title, colors=[], 
               stroke: {
                 curve: 'smooth',
                 width: 1
+              },
+              theme: {
+                palette : "palette2"
               },
               markers: {
                 size: 3,

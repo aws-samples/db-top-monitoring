@@ -79,6 +79,12 @@ export function customFormatNumberShort(value,decimalLength) {
     }
     
 
+    export function customFormatNumberInteger(value) {
+      
+      return value.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0}); 
+
+  }
+
 export class classMetric {
 
           

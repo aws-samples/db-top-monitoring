@@ -1,14 +1,14 @@
 import {memo} from 'react';
 import Chart from 'react-apexcharts';
 
-const ChartLine = memo(({series, categories,history, height, width="100%", title, border=2, stacked = false }) => {
-
+const ChartLine = memo(({series, categories,history, height, width="100%", title, border=2, stacked=false }) => {
+    
     var options = {
               chart: {
                 height: height,
-                type: 'line',
-                foreColor: '#9e9b9a',        
-                stacked : stacked,                        
+                type: 'area',
+                foreColor: '#9e9b9a',                
+                stacked : stacked,
                 zoom: {
                   enabled: false
                 },
@@ -48,7 +48,10 @@ const ChartLine = memo(({series, categories,history, height, width="100%", title
                     fontFamily: 'Lato',
               },
               theme: {
-                palette : "palette2"
+                palette : "palette2",
+                monochrome: {
+                  enabled: true
+                }
               },
               stroke: {
                 curve: 'straight',
@@ -130,7 +133,7 @@ const ChartLine = memo(({series, categories,history, height, width="100%", title
     
     return (
             <div>
-                <Chart options={options} series={JSON.parse(series)} type="line" width={width} height={height} />
+                <Chart options={options} series={JSON.parse(series)} type="area" width={width} height={height} />
             </div>
            );
 });
