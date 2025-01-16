@@ -277,7 +277,7 @@ function App() {
                                                       label: "CommitThroughput",
                                                       value: "CommitThroughput"
     });
-    const cloudwatchMetric = useRef({ type : "1", name : "CommitThroughput", descriptions : "The average number of commit operations per second.", unit : "Count/sec", format : 2 });
+    const cloudwatchMetric = useRef({ type : "1", name : "CommitThroughput", descriptions : "The average number of commit operations per second.", unit : "Count/sec", format : 3 });
     var metricName = useRef("");
 
 
@@ -703,7 +703,7 @@ function App() {
     
     
     useEffect(() => {        
-        const id = setInterval(gatherGlobalStats, configuration["apps-settings"]["refresh-interval-documentdb-metrics"]);
+        const id = setInterval(gatherGlobalStats, configuration["apps-settings"]["refresh-interval-aurora-limitless"]);
         return () => clearInterval(id);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
