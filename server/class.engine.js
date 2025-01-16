@@ -275,6 +275,7 @@ class classCluster {
                     this.objectNodes = [];
                     this.objectMetrics = new classMetrics({ metrics : object.metrics }) ;
                     this.#objLog.properties = {...this.#objLog.properties, instance : object.properties.name}
+                    this.locked = false;
                     
           }
           
@@ -282,197 +283,203 @@ class classCluster {
           //-- Refresh Data
           async refreshData() {
               
-                try{
-                
-                    this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
-                    var clusterInfo;
-                    switch(this.objectProperties.engineType){
+                if ( this.locked == false){
+                    this.locked = true;
+                    try{
                         
-                        case "elasticache":
-                        case "memorydb":
+                            this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+                            var clusterInfo;
+                            switch(this.objectProperties.engineType){
                                 
-                                //-- Update Cluster State        
-                                if ( this.objectProperties.engineType == "elasticache" )
-                                    clusterInfo = await AWSObject.getElasticacheClusterStatus(this.objectProperties.clusterId);
-                                else 
-                                    clusterInfo = await AWSObject.getMemoryDBClusterStatus(this.objectProperties.clusterId);
-                                
-                                //-- Update Metrics
-                                var nodeActivity = {};
-                                var metrics= {};
-                                
-                                this.objectMetrics.getMetricDictionary().forEach(metric => {
-                                    nodeActivity[metric.name] = 0;
-                                    metrics[metric.name] = 0;
-                                    for (let node of Object.keys(this.objectNodes)) {
-                                        metrics[metric.name] = metrics[metric.name] + ( this.objectNodes[node].getMetricValue(metric.name) || 0 );
-                                        if ( ( this.objectNodes[node].getMetricValue(metric.name) || 0 ) > 0)
-                                            nodeActivity[metric.name] = nodeActivity[metric.name] + 1 ;
-                                    }
-                                });
-                                
-                                
-                                //-- Update generic metrics
-                                for (let item of Object.keys(metrics)) {
-                                    this.objectMetrics.setItemValue(item, metrics[item]);
-                                }
-                                
-                                //-- Update special metrics : cpu, memory, getLatency, setLatency, cacheHitRate
-                                this.objectMetrics.setItemValueCustom("cpu" , metrics["cpu"] / nodeActivity["cpu"]);
-                                this.objectMetrics.setItemValueCustom("memory" , metrics["memory"] / nodeActivity["memory"]);
-                                this.objectMetrics.setItemValueCustom("getLatency" , metrics["getLatency"] / nodeActivity["getLatency"]);
-                                this.objectMetrics.setItemValueCustom("setLatency" , metrics["setLatency"] / nodeActivity["setLatency"]);
-                                this.objectMetrics.setItemValueCustom("globalLatency" , metrics["globalLatency"] / nodeActivity["globalLatency"]);
-                                this.objectMetrics.setItemValueCustom("cacheHitRate" , metrics["cacheHitRate"] / nodeActivity["cacheHitRate"]);
-                        break;
-                        
-                        
-                        
-                        
-                        case "documentdb":
-                        
-                                
-                                //-- Update Cluster State   
-                                
-                                clusterInfo = await AWSObject.getDocumentDBClusterStatus(this.objectProperties.clusterId);
-                                
-                                
-                                //-- Update Metrics
-                                
-                                var nodeActivity = {};
-                                var metrics= {};
-                                var metricTimestamp = [];
-                                
-                                this.objectMetrics.getMetricDictionary().forEach(metric => {
-                                    if (metric.type != 6 ) {
+                                case "elasticache":
+                                case "memorydb":
                                         
-                                        nodeActivity[metric.name] = 0;
-                                        metrics[metric.name] = 0;
-                                        metricTimestamp[metric.name] = [];
+                                        //-- Update Cluster State        
+                                        if ( this.objectProperties.engineType == "elasticache" )
+                                            clusterInfo = await AWSObject.getElasticacheClusterStatus(this.objectProperties.clusterId);
+                                        else 
+                                            clusterInfo = await AWSObject.getMemoryDBClusterStatus(this.objectProperties.clusterId);
                                         
-                                        for (let node of Object.keys(this.objectNodes)) {
-                                            
-                                            if (metric.type == 5 )
-                                                metricTimestamp[metric.name].push(this.objectNodes[node].getMetricValueTimestamp(metric.name));
-                                            
-                                            metrics[metric.name] = metrics[metric.name] + ( this.objectNodes[node].getMetricValue(metric.name) || 0 );
-                                            
-                                            if ( ( this.objectNodes[node].getMetricValue(metric.name) || 0 ) > 0)
-                                                nodeActivity[metric.name] = nodeActivity[metric.name] + 1 ;
-                                            
+                                        //-- Update Metrics
+                                        var nodeActivity = {};
+                                        var metrics= {};
+                                        
+                                        this.objectMetrics.getMetricDictionary().forEach(metric => {
+                                            nodeActivity[metric.name] = 0;
+                                            metrics[metric.name] = 0;
+                                            for (let node of Object.keys(this.objectNodes)) {
+                                                metrics[metric.name] = metrics[metric.name] + ( this.objectNodes[node].getMetricValue(metric.name) || 0 );
+                                                if ( ( this.objectNodes[node].getMetricValue(metric.name) || 0 ) > 0)
+                                                    nodeActivity[metric.name] = nodeActivity[metric.name] + 1 ;
+                                            }
+                                        });
+                                        
+                                        
+                                        //-- Update generic metrics
+                                        for (let item of Object.keys(metrics)) {
+                                            this.objectMetrics.setItemValue(item, metrics[item]);
                                         }
                                         
-                                    }
-                                });
+                                        //-- Update special metrics : cpu, memory, getLatency, setLatency, cacheHitRate
+                                        this.objectMetrics.setItemValueCustom("cpu" , metrics["cpu"] / nodeActivity["cpu"]);
+                                        this.objectMetrics.setItemValueCustom("memory" , metrics["memory"] / nodeActivity["memory"]);
+                                        this.objectMetrics.setItemValueCustom("getLatency" , metrics["getLatency"] / nodeActivity["getLatency"]);
+                                        this.objectMetrics.setItemValueCustom("setLatency" , metrics["setLatency"] / nodeActivity["setLatency"]);
+                                        this.objectMetrics.setItemValueCustom("globalLatency" , metrics["globalLatency"] / nodeActivity["globalLatency"]);
+                                        this.objectMetrics.setItemValueCustom("cacheHitRate" , metrics["cacheHitRate"] / nodeActivity["cacheHitRate"]);
+                                break;
                                 
                                 
-                                //-- Update generic metrics
-                                
-                                for (let item of Object.keys(metrics)) {
-                                    if ( !(['cpu','memory','ioreads','iowrites','netin','netout'].includes(item)))
-                                        this.objectMetrics.setItemValue(item, metrics[item]);
-                                }
                                 
                                 
-                                //-- Update special metrics : cpu, memory, ioreads, iowrites, netin, netout
-                               
-                                if ( timestampEqual(metricTimestamp["cpu"]) &&  this.#osMetricTimestamp['cpu'] != metricTimestamp["cpu"][0] ) {
-                                    this.objectMetrics.setItemValueCustom("cpu" , metrics["cpu"] / nodeActivity["cpu"]);
-                                    this.#osMetricTimestamp['cpu'] = metricTimestamp["cpu"][0];
-                                }
+                                case "documentdb":
                                 
-                                if ( timestampEqual(metricTimestamp['memory']) &&  this.#osMetricTimestamp['memory'] != metricTimestamp["memory"][0] ) {
-                                    this.objectMetrics.setItemValueCustom("memory" , metrics["memory"] / nodeActivity["memory"]);
-                                    this.#osMetricTimestamp['memory'] = metricTimestamp["memory"][0];
-                                } 
-                                
-                                if ( timestampEqual(metricTimestamp['ioreads']) &&  this.#osMetricTimestamp['ioreads'] != metricTimestamp["ioreads"][0] ) {
-                                    this.objectMetrics.setItemValueCustom("ioreads" , metrics["ioreads"]);
-                                    this.#osMetricTimestamp['ioreads'] = metricTimestamp["ioreads"][0];
-                                } 
-                                
-                                if ( timestampEqual(metricTimestamp['iowrites']) &&  this.#osMetricTimestamp['iowrites'] != metricTimestamp["iowrites"][0] ) {
-                                    this.objectMetrics.setItemValueCustom("iowrites" , metrics["iowrites"]);
-                                    this.#osMetricTimestamp['iowrites'] = metricTimestamp["iowrites"][0];
-                                } 
-                               
-                                if ( timestampEqual(metricTimestamp['netin']) &&  this.#osMetricTimestamp['netin'] != metricTimestamp["netin"][0] ) {
-                                    this.objectMetrics.setItemValueCustom("netin" , metrics["netin"]);
-                                    this.#osMetricTimestamp['netin'] = metricTimestamp["netin"][0];
-                                }
-                                
-                                if ( timestampEqual(metricTimestamp['netout']) &&  this.#osMetricTimestamp['netout'] != metricTimestamp["netout"][0] ) {
-                                    this.objectMetrics.setItemValueCustom("netout" , metrics["netout"]);
-                                    this.#osMetricTimestamp['netout'] = metricTimestamp["netout"][0];
-                                } 
-                                
-                        break;
-                        
-                        
-                        case "aurora-postgresql":
-                        case "aurora-mysql":
-                        
-                                
-                                //-- Update Cluster State   
-                                clusterInfo = await AWSObject.getAuroraClusterStatus(this.objectProperties.clusterId);
-                                
-                                //-- Update Instance Status
-                                var instancesInfo = await AWSObject.getAuroraNodesStatus(this.objectProperties.clusterId);
-                                
-                                
-                                //-- Update Metrics
-                                var nodeActivity = {};
-                                var metrics= {};
-                                var metricTimestamp = [];
-                                
-                                this.objectMetrics.getMetricDictionary().forEach(metric => {
                                         
-                                        nodeActivity[metric.name] = 0;
-                                        metrics[metric.name] = 0;
+                                        //-- Update Cluster State   
                                         
-                                        for (let node of Object.keys(this.objectNodes)) {
-                                            
-                                            metrics[metric.name] = metrics[metric.name] + ( this.objectNodes[node].getMetricValue(metric.name) || 0 );
-                                            
-                                            if ( ( this.objectNodes[node].getMetricValue(metric.name) || 0 ) > 0)
-                                                nodeActivity[metric.name] = nodeActivity[metric.name] + 1 ;
-                                            
-                                            this.objectNodes[node].objectProperties.status = instancesInfo[node].status;
-                                            this.objectNodes[node].objectProperties.size = instancesInfo[node].size;
-                                            this.objectNodes[node].objectProperties.monitoring = instancesInfo[node].monitoring;
-                                            
+                                        clusterInfo = await AWSObject.getDocumentDBClusterStatus(this.objectProperties.clusterId);
+                                        
+                                        
+                                        //-- Update Metrics
+                                        
+                                        var nodeActivity = {};
+                                        var metrics= {};
+                                        var metricTimestamp = [];
+                                        
+                                        this.objectMetrics.getMetricDictionary().forEach(metric => {
+                                            if (metric.type != 6 ) {
+                                                
+                                                nodeActivity[metric.name] = 0;
+                                                metrics[metric.name] = 0;
+                                                metricTimestamp[metric.name] = [];
+                                                
+                                                for (let node of Object.keys(this.objectNodes)) {
+                                                    
+                                                    if (metric.type == 5 )
+                                                        metricTimestamp[metric.name].push(this.objectNodes[node].getMetricValueTimestamp(metric.name));
+                                                    
+                                                    metrics[metric.name] = metrics[metric.name] + ( this.objectNodes[node].getMetricValue(metric.name) || 0 );
+                                                    
+                                                    if ( ( this.objectNodes[node].getMetricValue(metric.name) || 0 ) > 0)
+                                                        nodeActivity[metric.name] = nodeActivity[metric.name] + 1 ;
+                                                    
+                                                }
+                                                
+                                            }
+                                        });
+                                        
+                                        
+                                        //-- Update generic metrics
+                                        
+                                        for (let item of Object.keys(metrics)) {
+                                            if ( !(['cpu','memory','ioreads','iowrites','netin','netout'].includes(item)))
+                                                this.objectMetrics.setItemValue(item, metrics[item]);
                                         }
-                                     
-                                });
+                                        
+                                        
+                                        //-- Update special metrics : cpu, memory, ioreads, iowrites, netin, netout
+                                    
+                                        if ( timestampEqual(metricTimestamp["cpu"]) &&  this.#osMetricTimestamp['cpu'] != metricTimestamp["cpu"][0] ) {
+                                            this.objectMetrics.setItemValueCustom("cpu" , metrics["cpu"] / nodeActivity["cpu"]);
+                                            this.#osMetricTimestamp['cpu'] = metricTimestamp["cpu"][0];
+                                        }
+                                        
+                                        if ( timestampEqual(metricTimestamp['memory']) &&  this.#osMetricTimestamp['memory'] != metricTimestamp["memory"][0] ) {
+                                            this.objectMetrics.setItemValueCustom("memory" , metrics["memory"] / nodeActivity["memory"]);
+                                            this.#osMetricTimestamp['memory'] = metricTimestamp["memory"][0];
+                                        } 
+                                        
+                                        if ( timestampEqual(metricTimestamp['ioreads']) &&  this.#osMetricTimestamp['ioreads'] != metricTimestamp["ioreads"][0] ) {
+                                            this.objectMetrics.setItemValueCustom("ioreads" , metrics["ioreads"]);
+                                            this.#osMetricTimestamp['ioreads'] = metricTimestamp["ioreads"][0];
+                                        } 
+                                        
+                                        if ( timestampEqual(metricTimestamp['iowrites']) &&  this.#osMetricTimestamp['iowrites'] != metricTimestamp["iowrites"][0] ) {
+                                            this.objectMetrics.setItemValueCustom("iowrites" , metrics["iowrites"]);
+                                            this.#osMetricTimestamp['iowrites'] = metricTimestamp["iowrites"][0];
+                                        } 
+                                    
+                                        if ( timestampEqual(metricTimestamp['netin']) &&  this.#osMetricTimestamp['netin'] != metricTimestamp["netin"][0] ) {
+                                            this.objectMetrics.setItemValueCustom("netin" , metrics["netin"]);
+                                            this.#osMetricTimestamp['netin'] = metricTimestamp["netin"][0];
+                                        }
+                                        
+                                        if ( timestampEqual(metricTimestamp['netout']) &&  this.#osMetricTimestamp['netout'] != metricTimestamp["netout"][0] ) {
+                                            this.objectMetrics.setItemValueCustom("netout" , metrics["netout"]);
+                                            this.#osMetricTimestamp['netout'] = metricTimestamp["netout"][0];
+                                        } 
+                                        
+                                break;
                                 
                                 
-                                //-- Update generic metrics
-                                for (let item of Object.keys(metrics)) {
-                                    if ( !(['cpu','memory'].includes(item)))
-                                        this.objectMetrics.setItemValue(item, metrics[item]);
-                                }
+                                case "aurora-postgresql":
+                                case "aurora-mysql":
                                 
-                                 //-- Update special metrics : cpu, memory
-                                this.objectMetrics.setItemValue("cpu" , metrics["cpu"] / nodeActivity["cpu"]);
-                                this.objectMetrics.setItemValue("memory" , metrics["memory"] / nodeActivity["memory"]);
+                                        
+                                        //-- Update Cluster State   
+                                        clusterInfo = await AWSObject.getAuroraClusterStatus(this.objectProperties.clusterId);
+                                        
+                                        //-- Update Instance Status
+                                        var instancesInfo = await AWSObject.getAuroraNodesStatus(this.objectProperties.clusterId);
+                                        
+                                        
+                                        //-- Update Metrics
+                                        var nodeActivity = {};
+                                        var metrics= {};
+                                        var metricTimestamp = [];
+                                        
+                                        this.objectMetrics.getMetricDictionary().forEach(metric => {
+                                                
+                                                nodeActivity[metric.name] = 0;
+                                                metrics[metric.name] = 0;
+                                                
+                                                for (let node of Object.keys(this.objectNodes)) {
+                                                    
+                                                    metrics[metric.name] = metrics[metric.name] + ( this.objectNodes[node].getMetricValue(metric.name) || 0 );
+                                                    
+                                                    if ( ( this.objectNodes[node].getMetricValue(metric.name) || 0 ) > 0)
+                                                        nodeActivity[metric.name] = nodeActivity[metric.name] + 1 ;
+                                                    
+                                                    this.objectNodes[node].objectProperties.status = instancesInfo[node].status;
+                                                    this.objectNodes[node].objectProperties.size = instancesInfo[node].size;
+                                                    this.objectNodes[node].objectProperties.monitoring = instancesInfo[node].monitoring;
+                                                    
+                                                }
+                                            
+                                        });
+                                        
+                                        
+                                        //-- Update generic metrics
+                                        for (let item of Object.keys(metrics)) {
+                                            if ( !(['cpu','memory'].includes(item)))
+                                                this.objectMetrics.setItemValue(item, metrics[item]);
+                                        }
+                                        
+                                        //-- Update special metrics : cpu, memory
+                                        this.objectMetrics.setItemValue("cpu" , metrics["cpu"] / nodeActivity["cpu"]);
+                                        this.objectMetrics.setItemValue("memory" , metrics["memory"] / nodeActivity["memory"]);
+                                        
+                                break;
                                 
-                        break;
-                        
-                        
+                                
+                            }
+                            
+                            
+                            this.objectProperties = {...this.objectProperties, ...clusterInfo};
+                            
+                            //-- Gather new node stats
+                            for (let node of Object.keys(this.objectNodes)) {
+                                    this.objectNodes[node].gatherMetrics();
+                            }
+                    
                     }
-                    
-                    
-                    this.objectProperties = {...this.objectProperties, ...clusterInfo};
-                    
-                    //-- Gather new node stats
-                    for (let node of Object.keys(this.objectNodes)) {
-                            this.objectNodes[node].gatherMetrics();
+                    catch(err){
+                        this.#objLog.write("refreshData","err",err);
                     }
-            
-            }
-            catch(err){
-                this.#objLog.write("refreshData","err",err);
-            }
+
+                    this.locked = false;
+
+                }
             
               
           }
@@ -937,6 +944,7 @@ class classInstance {
                     this.objectMetrics = new classMetrics({ metrics : object.metrics }) ;
                     this.#objLog.properties = {...this.#objLog.properties, instance : object.properties.name}
                     this.objectSessions = [];
+                    this.locked = false;
           }
           
           
@@ -991,36 +999,42 @@ class classInstance {
           
             async refreshData(){
                 
-                try {
-                    
-                    // Instance Status
-                    var instanceInfo =  await AWSObject.getRdsInstanceStatus(this.objectProperties.instanceId);
-                    this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
-                    this.objectProperties.status = instanceInfo.status;
-                    this.objectProperties.az = instanceInfo.az;
-                    this.objectProperties.size = instanceInfo.size;
-                    
-                    //-- Snapshot metrics
-                    var timeNow = new Date();
-                    var currentData = await this.#engineConnector.getSnapshotInstance();
-                    var snapshot = {};
-                    
-                    this.objectProperties = {...this.objectProperties, ...currentData['properties'] };
-                    
-                    for (let metric of Object.keys(currentData['metrics'])) {
-                        snapshot = {...snapshot, [metric] : currentData['metrics'][metric]};
+                if (this.locked == false) {
+                    this.locked = true;
+                    try {
+                        
+                        // Instance Status
+                        var instanceInfo =  await AWSObject.getRdsInstanceStatus(this.objectProperties.instanceId);
+                        this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+                        this.objectProperties.status = instanceInfo.status;
+                        this.objectProperties.az = instanceInfo.az;
+                        this.objectProperties.size = instanceInfo.size;
+                        
+                        //-- Snapshot metrics
+                        var timeNow = new Date();
+                        var currentData = await this.#engineConnector.getSnapshotInstance();
+                        var snapshot = {};
+                        
+                        this.objectProperties = {...this.objectProperties, ...currentData['properties'] };
+                        
+                        for (let metric of Object.keys(currentData['metrics'])) {
+                            snapshot = {...snapshot, [metric] : currentData['metrics'][metric]};
+                        }
+                        this.objectMetrics.newSnapshot(snapshot,timeNow.getTime());
+                        
+                        this.objectProcesses = currentData['processes'];
+                        
+                        //-- Active Sessions 
+                        this.objectSessions = await this.#engineConnector.getActiveSessions();
+                        
+                        
                     }
-                    this.objectMetrics.newSnapshot(snapshot,timeNow.getTime());
-                    
-                    this.objectProcesses = currentData['processes'];
-                    
-                    //-- Active Sessions 
-                    this.objectSessions = await this.#engineConnector.getActiveSessions();
-                    
-                    
-                }
-                catch(err){
-                    this.#objLog.write("gatherMetrics","err",err);
+                    catch(err){
+                        this.#objLog.write("gatherMetrics","err",err);
+                    }
+
+                    this.locked = false;
+
                 }
                 
             }
@@ -1624,6 +1638,8 @@ class classDocumentDBElasticShard {
                 });
                 
                 this.objectMetrics = new classMetrics({ metrics : metrics }) ;
+
+                this.locked = false;
                 
                             
         }
@@ -1634,28 +1650,32 @@ class classDocumentDBElasticShard {
         //-- Refresh metrics
         async refreshData()
         {
-                try
-                {
-            
-                    var timeNow = new Date();
-                    var operationalStats = {};
-                    //-- Shards Metrics
-                    const shardMetrics = await AWSObject.getGenericMetrics({ metrics : this.#metricList });
-                    
-                    
-                    this.#metricCatalog.forEach(metric  => {
-                        operationalStats[metric] = shardMetrics[metric].value;
-                        operationalStats[metric+"Timestamp"] = shardMetrics[metric].timestamp;
-                    });
-                    
-                    //-- Take new snapshot
-                    this.objectMetrics.newSnapshot(operationalStats,timeNow.getTime());
-                    
-                                        
-                }
-                catch(err){
-                        this.#objLog.write("refreshData","err",err);
-                      
+                if (this.locked == false){
+                    this.locked = true;
+                    try
+                    {
+                
+                        var timeNow = new Date();
+                        var operationalStats = {};
+                        //-- Shards Metrics
+                        const shardMetrics = await AWSObject.getGenericMetrics({ metrics : this.#metricList });
+                        
+                        
+                        this.#metricCatalog.forEach(metric  => {
+                            operationalStats[metric] = shardMetrics[metric].value;
+                            operationalStats[metric+"Timestamp"] = shardMetrics[metric].timestamp;
+                        });
+                        
+                        //-- Take new snapshot
+                        this.objectMetrics.newSnapshot(operationalStats,timeNow.getTime());
+                        
+                                            
+                    }
+                    catch(err){
+                            this.#objLog.write("refreshData","err",err);                        
+                    }
+
+                    this.locked = false;
                 }
             
         }
@@ -1766,6 +1786,8 @@ class classDocumentDBElasticCluster {
                          this.#statsList.push(command + ":" + type);
                      });
                 });
+
+                this.locked = false;
                 
                 
         
@@ -1856,129 +1878,135 @@ class classDocumentDBElasticCluster {
         
         //-- Refresh metrics
         async refreshData(){
-                try
-                {
-                            
-                            //-- Update Cluster State
-                            
-                            var clusterInfo = await AWSObject.getDocumentDBElasticStatus(this.objectProperties.clusterArn);
-                            
-                            this.objectProperties.status = clusterInfo.status;
-                            this.objectProperties.shardCapacity = clusterInfo.shardCapacity;
-                            this.objectProperties.shardCount = clusterInfo.shardCount;
-                            this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
-                            
-                            
-                            
-                            //-- Update Cluster Operational Stats
-                            var timeNow = new Date();
-                            const currentOperations = await this.#connection.db("admin").command({ top: 1 });
-                     
-                            var operationalStats = {};
-                            this.#statsList.forEach(function(stat) {
-                                operationalStats['cluster:' + stat] = 0;
-                            });
-                            
-                           
-                            currentOperations.top.forEach(shard  => {
-                                    
-                                    this.#statsList.forEach(stat  => {
-                                        operationalStats['shard:' + shard.shardName + ":" + stat] = 0;
-                                    });
-                                    
-                                    
-                                    for (let db of Object.keys(shard.totals)) {
-                                            
-                                            if (!( ('db:' + db ) in operationalStats)){
-                                                
-                                                    this.#statsList.forEach(stat  => {
-                                                        operationalStats['db:' + db + ":" + stat] = 0;
-                                                    });
-                                                
-                                            }
-                                            
-                                            for (let metric of Object.keys(shard.totals[db])) {
-                                                
-                                                    ['count','time'].forEach(stat  => {
-                                                        
-                                                            operationalStats['cluster:' +  metric + ":" + stat] =  operationalStats['cluster:' +  metric + ":" + stat] + shard.totals[db][metric][stat];
-                                                            operationalStats['shard:' + shard.shardName + ":" + metric + ":" + stat] =  operationalStats['shard:' + shard.shardName + ":" + metric + ":" + stat] + shard.totals[db][metric][stat];
-                                                            operationalStats['db:' + db + ":" + metric + ":" + stat] =  operationalStats['db:' + db + ":" + metric + ":" + stat] + shard.totals[db][metric][stat];
-                                                    });
-                                                    
-                                                    ['latency'].forEach(stat  => {
-                                                            operationalStats['cluster:' +  metric + ":" + stat] =  0;
-                                                            operationalStats['shard:' + shard.shardName + ":" + metric + ":" + stat] =  0;
-                                                            operationalStats['db:' + db + ":" + metric + ":" + stat] =  0;
-                                                    });
-                                                
-                                                   
-                                            }
-                                            
-                                    }
-                                        
-                            });
-                            
-                            
-                            
-                            
-                            //-- Update Cluster Metrics - AWS CloudWatch
-                            const clusterMetrics = await AWSObject.getGenericMetrics({ metrics : this.#metricList });
-                            
-                            
-                            this.#metricCatalog.forEach(metric  => {
-                                operationalStats[metric] = clusterMetrics[metric].value;
-                                operationalStats[metric+"Timestamp"] = clusterMetrics[metric].timestamp;
-                            });
-                            
-                            
-                            //-- Take new snapshot
-                            this.objectMetrics.newSnapshot(operationalStats,timeNow.getTime());
-                            
-                            
-                            //-- Update Latency Stats - Cluster
-                            ['total','insert','queries','update','remove','getmore','commands'].forEach(stat  => {
-                                    this.objectMetrics.setItemValueCustom(
-                                                                            "cluster:" + stat + ":latency",
-                                                                            ( this.objectMetrics.getItemValue("cluster:" + stat + ":time") / this.objectMetrics.getItemValue("cluster:" + stat + ":count")) || 0
-                                                                         );
-                            });
-                            
-                            
-                            //-- Update Latency Stats - Shards
-                            this.#metadata['shards'].forEach(shard  => {
-                                    ['total','insert','queries','update','remove','getmore','commands'].forEach(stat  => {
-                                            this.objectMetrics.setItemValueCustom(
-                                                                                    "shard:" +  shard + ":" + stat + ":latency", 
-                                                                                    ( this.objectMetrics.getItemValue("shard:" +  shard + ":" + stat + ":time") / this.objectMetrics.getItemValue("shard:" +  shard + ":" + stat + ":count")) || 0
-                                                                                );
-                                    });
-                            });
-                            
-                            
-                            //-- Update Latency Stats - Databases
-                            this.#metadata['dbs'].forEach(db  => {
-                                    ['total','insert','queries','update','remove','getmore','commands'].forEach(stat  => {
-                                            this.objectMetrics.setItemValueCustom(
-                                                                                    "db:" +  db + ":" + stat + ":latency",
-                                                                                    ( this.objectMetrics.getItemValue("db:" +  db + ":" + stat + ":time") / this.objectMetrics.getItemValue("db:" +  db + ":" + stat + ":count")) || 0
-                                                                                );
-                                    });
-                            });
-
-
-                            
-                            //-- Update Shard Metrics - AWS CloudWatch
-                            for (let shard of Object.keys(this.#clusterShards)) {
-                                    this.#clusterShards[shard].refreshData();
-                            }
-                            
-                                        
-                }
-                catch(err){
-                        this.#objLog.write("refreshData","err",err);
+                if (this.locked == false) {
+                    this.locked = true;
+                    try
+                    {
+                                
+                                //-- Update Cluster State
+                                
+                                var clusterInfo = await AWSObject.getDocumentDBElasticStatus(this.objectProperties.clusterArn);
+                                
+                                this.objectProperties.status = clusterInfo.status;
+                                this.objectProperties.shardCapacity = clusterInfo.shardCapacity;
+                                this.objectProperties.shardCount = clusterInfo.shardCount;
+                                this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+                                
+                                
+                                
+                                //-- Update Cluster Operational Stats
+                                var timeNow = new Date();
+                                const currentOperations = await this.#connection.db("admin").command({ top: 1 });
                         
-                 
+                                var operationalStats = {};
+                                this.#statsList.forEach(function(stat) {
+                                    operationalStats['cluster:' + stat] = 0;
+                                });
+                                
+                            
+                                currentOperations.top.forEach(shard  => {
+                                        
+                                        this.#statsList.forEach(stat  => {
+                                            operationalStats['shard:' + shard.shardName + ":" + stat] = 0;
+                                        });
+                                        
+                                        
+                                        for (let db of Object.keys(shard.totals)) {
+                                                
+                                                if (!( ('db:' + db ) in operationalStats)){
+                                                    
+                                                        this.#statsList.forEach(stat  => {
+                                                            operationalStats['db:' + db + ":" + stat] = 0;
+                                                        });
+                                                    
+                                                }
+                                                
+                                                for (let metric of Object.keys(shard.totals[db])) {
+                                                    
+                                                        ['count','time'].forEach(stat  => {
+                                                            
+                                                                operationalStats['cluster:' +  metric + ":" + stat] =  operationalStats['cluster:' +  metric + ":" + stat] + shard.totals[db][metric][stat];
+                                                                operationalStats['shard:' + shard.shardName + ":" + metric + ":" + stat] =  operationalStats['shard:' + shard.shardName + ":" + metric + ":" + stat] + shard.totals[db][metric][stat];
+                                                                operationalStats['db:' + db + ":" + metric + ":" + stat] =  operationalStats['db:' + db + ":" + metric + ":" + stat] + shard.totals[db][metric][stat];
+                                                        });
+                                                        
+                                                        ['latency'].forEach(stat  => {
+                                                                operationalStats['cluster:' +  metric + ":" + stat] =  0;
+                                                                operationalStats['shard:' + shard.shardName + ":" + metric + ":" + stat] =  0;
+                                                                operationalStats['db:' + db + ":" + metric + ":" + stat] =  0;
+                                                        });
+                                                    
+                                                    
+                                                }
+                                                
+                                        }
+                                            
+                                });
+                                
+                                
+                                
+                                
+                                //-- Update Cluster Metrics - AWS CloudWatch
+                                const clusterMetrics = await AWSObject.getGenericMetrics({ metrics : this.#metricList });
+                                
+                                
+                                this.#metricCatalog.forEach(metric  => {
+                                    operationalStats[metric] = clusterMetrics[metric].value;
+                                    operationalStats[metric+"Timestamp"] = clusterMetrics[metric].timestamp;
+                                });
+                                
+                                
+                                //-- Take new snapshot
+                                this.objectMetrics.newSnapshot(operationalStats,timeNow.getTime());
+                                
+                                
+                                //-- Update Latency Stats - Cluster
+                                ['total','insert','queries','update','remove','getmore','commands'].forEach(stat  => {
+                                        this.objectMetrics.setItemValueCustom(
+                                                                                "cluster:" + stat + ":latency",
+                                                                                ( this.objectMetrics.getItemValue("cluster:" + stat + ":time") / this.objectMetrics.getItemValue("cluster:" + stat + ":count")) || 0
+                                                                            );
+                                });
+                                
+                                
+                                //-- Update Latency Stats - Shards
+                                this.#metadata['shards'].forEach(shard  => {
+                                        ['total','insert','queries','update','remove','getmore','commands'].forEach(stat  => {
+                                                this.objectMetrics.setItemValueCustom(
+                                                                                        "shard:" +  shard + ":" + stat + ":latency", 
+                                                                                        ( this.objectMetrics.getItemValue("shard:" +  shard + ":" + stat + ":time") / this.objectMetrics.getItemValue("shard:" +  shard + ":" + stat + ":count")) || 0
+                                                                                    );
+                                        });
+                                });
+                                
+                                
+                                //-- Update Latency Stats - Databases
+                                this.#metadata['dbs'].forEach(db  => {
+                                        ['total','insert','queries','update','remove','getmore','commands'].forEach(stat  => {
+                                                this.objectMetrics.setItemValueCustom(
+                                                                                        "db:" +  db + ":" + stat + ":latency",
+                                                                                        ( this.objectMetrics.getItemValue("db:" +  db + ":" + stat + ":time") / this.objectMetrics.getItemValue("db:" +  db + ":" + stat + ":count")) || 0
+                                                                                    );
+                                        });
+                                });
+
+
+                                
+                                //-- Update Shard Metrics - AWS CloudWatch
+                                for (let shard of Object.keys(this.#clusterShards)) {
+                                        this.#clusterShards[shard].refreshData();
+                                }
+                                
+                                            
+                    }
+                    catch(err){
+                            this.#objLog.write("refreshData","err",err);
+                            
+                    
+                    }
+                    
+                    this.locked = false;
+
                 }
             
         }
@@ -3650,6 +3678,8 @@ class classElasticacheServerlessCluster {
                         this.#metrics[metric] = { timestamps : [], values : [] };
                         
                 };
+
+                this.locked = false;
                 
                 
                 
@@ -3799,58 +3829,66 @@ class classElasticacheServerlessCluster {
         
         //-- Refresh metrics
         async refreshData() {
-            
-            
-            const clusterStatus = await AWSObject.getElasticacheServerlessClusterStatus(this.objectProperties.clusterId);
-            this.objectProperties = {...this.objectProperties, ...clusterStatus };
-            this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
-            
-            //-- Update Cluster Metrics - AWS CloudWatch
-            const clusterMetrics = await AWSObject.getGenericMetricsDataset({ metrics : this.#metricList, interval : 60, period : 1 });
-            var history = [];
-            var value = 0;
-            var delay = 0;
-            clusterMetrics.forEach(item => {
-                    try {
-                            
-                            if ( item.Timestamps.length > 0 ) {
-                                
-                                delay = this.#dateDiff(item.Timestamps[0]);
-                                if ( delay <= 5 ) {
-                                    if ( this.#metricCatalog[item.Label].factor == 1)
-                                        value = item.Values[0];
-                                    else
-                                        value = item.Values[0] / this.#metricCatalog[item.Label].factor;
-                                }
-                                else    
-                                    value = 0;
+             
+            if (this.locked == false) {
+                try {
+                    this.locked = true;
+                    const clusterStatus = await AWSObject.getElasticacheServerlessClusterStatus(this.objectProperties.clusterId);
+                    this.objectProperties = {...this.objectProperties, ...clusterStatus };
+                    this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+                    
+                    //-- Update Cluster Metrics - AWS CloudWatch
+                    const clusterMetrics = await AWSObject.getGenericMetricsDataset({ metrics : this.#metricList, interval : 60, period : 1 });
+                    var history = [];
+                    var value = 0;
+                    var delay = 0;
+                    clusterMetrics.forEach(item => {
+                            try {
                                     
-                                history = item.Timestamps.map((value, index) => {
-                                 
-                                  if ( this.#metricCatalog[item.Label].factor == 1)
-                                    return [item.Timestamps[index], item.Values[index] ];
-                                  else
-                                    return [item.Timestamps[index], item.Values[index] / this.#metricCatalog[item.Label].factor ];
+                                    if ( item.Timestamps.length > 0 ) {
+                                        
+                                        delay = this.#dateDiff(item.Timestamps[0]);
+                                        if ( delay <= 5 ) {
+                                            if ( this.#metricCatalog[item.Label].factor == 1)
+                                                value = item.Values[0];
+                                            else
+                                                value = item.Values[0] / this.#metricCatalog[item.Label].factor;
+                                        }
+                                        else    
+                                            value = 0;
+                                            
+                                        history = item.Timestamps.map((value, index) => {
+                                        
+                                        if ( this.#metricCatalog[item.Label].factor == 1)
+                                            return [item.Timestamps[index], item.Values[index] ];
+                                        else
+                                            return [item.Timestamps[index], item.Values[index] / this.#metricCatalog[item.Label].factor ];
+                                            
+                                        });
+                                        
+                                        
+                                        for (let iMinutes=1; iMinutes <= delay ; iMinutes++){
+                                            history.push([this.#addMinutes(new Date(item.Timestamps[0]),iMinutes), null ]);         
+                                        }
+                                        
+                                    }
+                                    else {
+                                        history = [];
+                                        value = 0;
+                                    }
                                     
-                                });
-                                
-                                
-                                for (let iMinutes=1; iMinutes <= delay ; iMinutes++){
-                                    history.push([this.#addMinutes(new Date(item.Timestamps[0]),iMinutes), null ]);         
-                                }
-                                
+                                    this.#metrics[item.Label] = { value, value, history : history };
                             }
-                            else {
-                                history = [];
-                                value = 0;
+                            catch(err){
+                                this.#objLog.write("refreshData","err",err);
                             }
-                            
-                            this.#metrics[item.Label] = { value, value, history : history };
-                    }
-                    catch(err){
-                        this.#objLog.write("refreshData","err",err);
-                    }
-            });
+                    });
+                }
+                catch(err){
+                    this.#objLog.write("refreshData","err",err);
+                }
+                this.locked = false;
+            }
             
         }
         
@@ -4020,6 +4058,8 @@ class classDynamoDB {
                         this.#metrics[metric] = { timestamps : [], values : [] };
                         
                 };
+
+                this.locked = false;
                 
                 
                             
@@ -4030,62 +4070,71 @@ class classDynamoDB {
         //-- Refresh metrics
         async refreshData() {
             
-            const tableInfo = await AWSObject.getDynamoDBTableInfo(this.objectProperties.tableName);
-            this.objectProperties = {...this.objectProperties, ...tableInfo };
-            this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
-            
-            //-- Update Cluster Metrics - AWS CloudWatch
-            const tableMetrics = await AWSObject.getGenericMetricsDataset({ metrics : this.#metricList, interval : 60, period : (1 / 60) });
-            var history = [];
-            var value = 0;
-            var delay = 0;
-            tableMetrics.forEach(item => {
-                    try {
-                                
-                            if ( item.Timestamps.length > 0 ) {
-                                
-                                item.Timestamps.shift();
-                                item.Values.shift();
-                                
-                                delay = this.#dateDiff(item.Timestamps[0]);
-                                if ( delay <= 5 ) {
-                                    if ( this.#metricCatalog[item.Label].factor == 1)
-                                        value = item.Values[0];
-                                    else
-                                        value = item.Values[0] / this.#metricCatalog[item.Label].factor;
-                                }
-                                else    
-                                    if (item.Label == "ProvisionedWriteCapacityUnits" || item.Label == "ProvisionedReadCapacityUnits")
-                                        value = item.Values[0];
-                                    else
+            if (this.locked == false){
+                this.locked = true;
+                try {
+                    const tableInfo = await AWSObject.getDynamoDBTableInfo(this.objectProperties.tableName);
+                    this.objectProperties = {...this.objectProperties, ...tableInfo };
+                    this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
+                    
+                    //-- Update Cluster Metrics - AWS CloudWatch
+                    const tableMetrics = await AWSObject.getGenericMetricsDataset({ metrics : this.#metricList, interval : 60, period : (1 / 60) });
+                    var history = [];
+                    var value = 0;
+                    var delay = 0;
+                    tableMetrics.forEach(item => {
+                            try {
+                                        
+                                    if ( item.Timestamps.length > 0 ) {
+                                        
+                                        item.Timestamps.shift();
+                                        item.Values.shift();
+                                        
+                                        delay = this.#dateDiff(item.Timestamps[0]);
+                                        if ( delay <= 5 ) {
+                                            if ( this.#metricCatalog[item.Label].factor == 1)
+                                                value = item.Values[0];
+                                            else
+                                                value = item.Values[0] / this.#metricCatalog[item.Label].factor;
+                                        }
+                                        else    
+                                            if (item.Label == "ProvisionedWriteCapacityUnits" || item.Label == "ProvisionedReadCapacityUnits")
+                                                value = item.Values[0];
+                                            else
+                                                value = 0;
+                                            
+                                        history = item.Timestamps.map((value, index) => {
+                                        
+                                        if ( this.#metricCatalog[item.Label].factor == 1)
+                                            return [item.Timestamps[index], item.Values[index] ];
+                                        else
+                                            return [item.Timestamps[index], item.Values[index] / this.#metricCatalog[item.Label].factor ];
+                                            
+                                        });
+                                        
+                                        
+                                        for (let iMinutes=1; iMinutes <= delay ; iMinutes++){
+                                            history.push([this.#addMinutes(new Date(item.Timestamps[0]),iMinutes), null ]);         
+                                        }
+                                        
+                                    }
+                                    else {
+                                        history = [];
                                         value = 0;
+                                    }
                                     
-                                history = item.Timestamps.map((value, index) => {
-                                 
-                                  if ( this.#metricCatalog[item.Label].factor == 1)
-                                    return [item.Timestamps[index], item.Values[index] ];
-                                  else
-                                    return [item.Timestamps[index], item.Values[index] / this.#metricCatalog[item.Label].factor ];
-                                    
-                                });
-                                
-                                
-                                for (let iMinutes=1; iMinutes <= delay ; iMinutes++){
-                                    history.push([this.#addMinutes(new Date(item.Timestamps[0]),iMinutes), null ]);         
-                                }
-                                
+                                    this.#metrics[item.Label] = { value, value, history : history };
                             }
-                            else {
-                                history = [];
-                                value = 0;
+                            catch(err){
+                                this.#objLog.write("refreshData","err",err);
                             }
-                            
-                            this.#metrics[item.Label] = { value, value, history : history };
-                    }
-                    catch(err){
-                        this.#objLog.write("refreshData","err",err);
-                    }
-            });
+                    });
+                }
+                catch(err){
+                    this.#objLog.write("refreshData","err",err);
+                }
+                this.locked = false;
+            }
             
         }
         
@@ -4286,7 +4335,8 @@ class classAuroraLimitlessPostgresqlEngine {
                         a.subcluster_id,
                         a.subcluster_type
                         order by 
-                        a.subcluster_id
+                        a.subcluster_id                        
+
     `;
     
     #sql_statement_sessions = `
@@ -4398,6 +4448,8 @@ class classAuroraLimitlessPostgresqlEngine {
                 this.#cluster['metrics']['shards'] = new classMetrics({ metrics : this.objectMetrics }) ;
                 this.#cluster['metrics']['routers'] = new classMetrics({ metrics : this.objectMetrics }) ;
             }           
+
+            this.locked = false;
             
     }
     
@@ -4501,17 +4553,17 @@ class classAuroraLimitlessPostgresqlEngine {
     //-- Gather new snapshot
     async getSnapshot(){     
 
+           
             try
             {
              
                 //-- Gather metadata from AWS API
                 this.#clusterMetadata = await AWSObject.getAuroraLimitlessClusterObject(this.objectProperties.clusterId);
                 this.#shardGroupMetadata = await AWSObject.getAuroraLimitlessDbShardObject(this.objectProperties.clusterId);                
-
+           
                 //-- Database Metrics
                 this.objectProperties.lastUpdate = new Date().toTimeString().split(' ')[0];
                 var currentOperations = (await this.#connection.query(this.#sql_statement_metrics)).rows;
-                
                         
                 var result = {};
                 var clusterSnapshot = {};
@@ -4525,7 +4577,7 @@ class classAuroraLimitlessPostgresqlEngine {
                                                 this.#shards[item['subcluster_id']]?.['codeType'] + "/" + 
                                                 this.#shards[item['subcluster_id']]?.['subClusterId'] + "-" + 
                                                 this.#shards[item['subcluster_id']]?.['subInstanceId'] ;
-                                                                                
+                                
                                 var result = await AWSObject.getCloudWatchRecords({ 
                                                                                             logStreamName: logStreamName,
                                                                                             limit: 1,
@@ -4533,9 +4585,8 @@ class classAuroraLimitlessPostgresqlEngine {
                                                                                             startFromHead: false                                                                                               
                                                                                         
                                 });
-
-                                var record = JSON.parse(result.events[0].message);     
-                                
+           
+                                var record = JSON.parse(result.events[0].message);                                     
                                 var nodeSnapshot = {
                                                 vcpu: parseFloat(record['numVCPUs']),                                                                                             
                                                 readIOPS: parseFloat(record['diskIO']?.[0]?.['readIOsPS']),
@@ -4647,9 +4698,15 @@ class classAuroraLimitlessPostgresqlEngine {
 
 
     //-- Refresh Cluster Data
-    async refreshData() {         
-        await this.getSnapshot();      
-        await this.getCloudwatchMetricsTable();        
+    async refreshData() {     
+        
+        if (this.locked==false){               
+            this.locked = true;            
+            await this.getSnapshot();      
+            await this.getCloudwatchMetricsTable();        
+            this.locked = false;            
+        }         
+
     }
 
 
