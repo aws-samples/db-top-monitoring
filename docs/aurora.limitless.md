@@ -2,7 +2,7 @@
 
 We're excited to announce a new feature release for DBTop Monitoring Solution an Open Source project that augment comprehensive monitoring capabilities for Amazon Aurora Limitless databases. This open-source enhancement enables database administrators and developers to gain deep visibility into Aurora Limitless infrastructure performance and resource utilization.
 
-<img width="1089" alt="image" src="../images/dbtop.aurora.limitless.png">
+<img width="1089" alt="image" src="../images/dbtop.aurora.limitless.gif">
 
 
 ## About This Initiative
