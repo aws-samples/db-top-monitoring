@@ -1,13 +1,13 @@
-# DBTop Monitoring Solution - Aurora Limitless Monitoring Feature Release
+# DBTop Monitoring Solution - Aurora Limitless Monitoring - Feature Release
 
 We're excited to announce a new feature release for DBTop Monitoring Solution an Open Source project that augment comprehensive monitoring capabilities for Amazon Aurora Limitless databases. This open-source enhancement enables database administrators and developers to gain deep visibility into Aurora Limitless infrastructure performance and resource utilization.
 
-<img width="1089" alt="image" src="./images/dbtop.aurora.limitless.png">
+<img width="1089" alt="image" src="../images/dbtop.aurora.limitless.png">
 
 
 ## About This Initiative
 
-This feature is part of an ongoing effort led by AWS Database Specialists (Sergio Nuñez - Database Cloud Acceleration SA, Robert Luna Rojas#ENT-SSI) to enhance the AWS Community's database monitoring capabilities. Their commitment to open-source development aims to provide advanced observability solutions for AWS database services, making it easier for customers to monitor, troubleshoot, and optimize their database deployments.
+This feature is part of an ongoing effort led by AWS Database Specialists ([Sergio Nuñez Matus - Database Migration Specialist](https://www.linkedin.com/in/snmatus/), [Robert Luna Rojas - Sr Database Specialist Solutions Architect](https://www.linkedin.com/in/robertolunarojas/) ) to enhance the AWS Community's database monitoring capabilities. Their commitment to open-source development aims to provide advanced observability solutions for AWS database services, making it easier for customers to monitor, troubleshoot, and optimize their database deployments.
 
 The DBTop Monitoring Solution exemplifies AWS's commitment to open-source software, allowing customers to not only use but also customize and enhance the solution according to their specific needs. This collaboration between AWS Database Specialists and the community helps drive innovation in database monitoring and management.
 
