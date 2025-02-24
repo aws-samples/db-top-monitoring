@@ -1,6 +1,10 @@
 # DBTop Monitoring Solution - Aurora Limitless Monitoring - Feature Release
 
+> **Disclaimer:** The sample code; software libraries; command line tools; proofs of concept; templates; or other related technology (including any of the foregoing that are provided by our personnel) is provided to you as AWS Content under the AWS Customer Agreement, or the relevant written agreement between you and AWS (whichever applies). You are responsible for testing, securing, and optimizing the AWS Content, such as sample code, as appropriate for production grade use based on your specific quality control practices and standards. Deploying AWS Content may incur AWS charges for creating or using AWS chargeable resources, such as running Amazon EC2 instances, using Amazon CloudWatch or Amazon Cognito.
+
 We're excited to announce a new feature release for DBTop Monitoring Solution an Open Source project that augment comprehensive monitoring capabilities for Amazon Aurora Limitless databases. This open-source enhancement enables database administrators and developers to gain deep visibility into Aurora Limitless infrastructure performance and resource utilization.
+
+<img width="1089" alt="image" src="../images/dbtop.aurora.limitless.png">
 
 <img width="1089" alt="image" src="../images/dbtop.aurora.limitless.gif">
 
