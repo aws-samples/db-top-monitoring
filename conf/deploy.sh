@@ -62,9 +62,11 @@ fi
 
 STACK_NAME="db-top-solution"
 STACK_NAME=$(gum input --placeholder ${STACK_NAME} --value ${STACK_NAME})
+echo "Stack name: ${STACK_NAME}"
 
 USER_EMAIL="email@example.com"
 USER_EMAIL=$(gum input --placeholder ${USER_EMAIL} --value ${USER_EMAIL})
+echo "User email: ${USER_EMAIL}"
 
 VPC_PARAM="vpc-abc123456789"
 VPC_PARAM=$(gum input --placeholder ${VPC_PARAM} --value ${VPC_PARAM})
@@ -78,8 +80,8 @@ if ! aws ec2 describe-vpcs --vpc-ids ${VPC_PARAM} --region ${AWS_REGION} >/dev/n
     VPC_SELECTION=$(echo "${VPC_LIST}" | gum choose)
     # Extract VPC ID from selection
     VPC_PARAM=$(echo ${VPC_SELECTION} | cut -d' ' -f1)
-    echo "Selected VPC: ${VPC_PARAM}"
 fi
+echo "Selected VPC: ${VPC_PARAM}"
 
 SUBNET_PARAM="subnet-abc123456789"
 SUBNET_PARAM=$(gum input --placeholder ${SUBNET_PARAM} --value ${SUBNET_PARAM})
@@ -123,8 +125,8 @@ if ! check_subnet_public ${SUBNET_PARAM} ${VPC_PARAM} ${AWS_REGION}; then
     SUBNET_SELECTION=$(echo "${SUBNET_LIST}" | gum choose)
     # Extract subnet ID from selection
     SUBNET_PARAM=$(echo ${SUBNET_SELECTION} | cut -d' ' -f1)
-    echo "Selected Subnet: ${SUBNET_PARAM}"
 fi
+echo "Selected Subnet: ${SUBNET_PARAM}"
 
 INSTANCE_TYPE="t4g.large"
 INSTANCE_TYPE=$(gum input --placeholder ${INSTANCE_TYPE} --value ${INSTANCE_TYPE})
@@ -137,23 +139,44 @@ if ! echo "${ALLOWED_INSTANCES}" | grep -q "^${INSTANCE_TYPE}$"; then
     echo "Error: Instance type ${INSTANCE_TYPE} is not allowed"
     # Let user select from allowed instances using gum choice
     INSTANCE_TYPE=$(echo "${ALLOWED_INSTANCES}" | gum choose)
-    echo "Selected Instance Type: ${INSTANCE_TYPE}"
 fi
+echo "Selected Instance Type: ${INSTANCE_TYPE}"
 
 PUBLIC_ACCESS="true"
 SG_INBOUND_ACCESS="0.0.0.0/0"
 GITHUB_REPOSITORY="aws-samples"
 
-aws cloudformation create-stack \
-    --stack-name "${STACK_NAME}" \
-    --template-body file://DBTopMonitoringSolution.yaml \
-    --parameters \
-		ParameterKey=Username,ParameterValue=${USER_EMAIL} \
-		ParameterKey=VPCParam,ParameterValue=${VPC_PARAM} \
-		ParameterKey=SubnetParam,ParameterValue=${SUBNET_PARAM} \
-		ParameterKey=InstanceType,ParameterValue=${INSTANCE_TYPE} \
-		ParameterKey=PublicAccess,ParameterValue=${PUBLIC_ACCESS} \
-		ParameterKey=SGInboundAccess,ParameterValue=${SG_INBOUND_ACCESS} \
-		ParameterKey=GitHubRepository,ParameterValue=${GITHUB_REPOSITORY} \
-    --region ${AWS_REGION} \
-    --capabilities CAPABILITY_NAMED_IAM
+# Check if stack already exists
+if aws cloudformation describe-stacks --stack-name "${STACK_NAME}" --region ${AWS_REGION} >/dev/null 2>&1; then
+    echo "Stack ${STACK_NAME} already exists in region ${REGION_EMOJI}"
+    
+    # Get stack outputs
+    STACK_OUTPUTS=$(aws cloudformation describe-stacks \
+        --stack-name "${STACK_NAME}" \
+        --region ${AWS_REGION} \
+        --query 'Stacks[0].Outputs[]' \
+        --output json)
+
+    # Display stack description
+    echo "Stack ${STACK_NAME} details:"
+    echo "${STACK_OUTPUTS}" | jq -r '.[] | "\(.Description): \(.OutputValue)"'
+
+    # Get public URL from outputs
+    PUBLIC_URL=$(echo "${STACK_OUTPUTS}" | jq -r '.[] | select(.OutputKey=="PublicAppURL") | .OutputValue')
+    echo -e "\nPublic URL: ${PUBLIC_URL}"
+else
+    echo "Creating stack ${STACK_NAME} in region ${REGION_EMOJI}"
+    aws cloudformation create-stack \
+        --stack-name "${STACK_NAME}" \
+        --template-body file://DBTopMonitoringSolution.yaml \
+        --parameters \
+			ParameterKey=Username,ParameterValue=${USER_EMAIL} \
+			ParameterKey=VPCParam,ParameterValue=${VPC_PARAM} \
+			ParameterKey=SubnetParam,ParameterValue=${SUBNET_PARAM} \
+			ParameterKey=InstanceType,ParameterValue=${INSTANCE_TYPE} \
+			ParameterKey=PublicAccess,ParameterValue=${PUBLIC_ACCESS} \
+			ParameterKey=SGInboundAccess,ParameterValue=${SG_INBOUND_ACCESS} \
+			ParameterKey=GitHubRepository,ParameterValue=${GITHUB_REPOSITORY} \
+        --region ${AWS_REGION} \
+        --capabilities CAPABILITY_NAMED_IAM > ../logs/stack-${STACK_NAME}.json
+fi
